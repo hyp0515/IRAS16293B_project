@@ -1,0 +1,8 @@
+incl_dust = 1
+incl_lines = 1
+nphot = 500000
+nphot_scat = 5000000
+scattering_mode_max = 2
+istar_sphere = 1
+setthreads = 22
+modified_random_walk = 1 
