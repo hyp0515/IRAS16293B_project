@@ -24,7 +24,7 @@ model = radmc3d_setup(silent=False)
 model.get_mastercontrol(filename=None,
                         comment=None,
                         incl_dust=1,
-                        incl_lines=1,
+                        incl_lines=0,
                         nphot=500000,
                         nphot_scat=5000000,
                         scattering_mode_max=2,
@@ -32,13 +32,10 @@ model.get_mastercontrol(filename=None,
                         num_cpu=None,
                         modified_random_walk = 1
                         )
-model.get_linecontrol(filename=None,
-                    methanol='ch3oh leiden 0 0 0')
 model.get_continuumlambda(filename=None,
                         comment=None,
                         lambda_micron=None,
                         append=False)
-
 model.get_diskcontrol(  d_to_g_ratio    = 0.01,
                         a_max           = amax, # mm
                         Mass_of_star    = mstar, # Msun
@@ -49,62 +46,29 @@ model.get_diskcontrol(  d_to_g_ratio    = 0.01,
                         NTheta=200,
                         NPhi  =20,
                         )
-model.get_vfieldcontrol(Kep=True,
-                        vinfall=0.5, # the infall velocity (unit: Keperian velocity)
-                        Rcb=None, # the centrifugal barrier
-                        outflow=None)
 model.get_heatcontrol(L_star=l_star, # Lsun
                       R_star=1,
                       heat=heating) # radiation/accretion
-model.get_gasdensitycontrol(abundance=1e-10, # abundance of CH3OH compared to H2
-                            snowline=100, # snowline temperature
-                            enhancement=1e5, # enhancement factor of abundance inside snowline
-                            gas_inside_rcb=True)
+
 
 simulation = generate_simulation(save_out=True, save_npz=True)
 
 simulate_mutual_parms = {
     "incl"      : 50,
-    "line"      : 240,
     "npix"      : 500,
     "sizeau"    : 150,
-    "v_width"   : 10,
-    "vkms"      : 0,
-    "v_width"   : 10,
     "posang"    : 100,
     "dir"       : './test/',
     "fname"     : 'test',
 }
 
-# simulation.generate_cube(
-#     nodust=False, scat=True, extract_gas=True,
-#     nlam=11,
-#     **simulate_mutual_parms
-# )
 
-# simulation.generate_cube(
-#     nodust=False, scat=True, extract_gas=True,
-#     nlam=50,
-#     **simulate_mutual_parms
-# )
 
 simulation.generate_continuum(
    scat=True,
    wav=3000,
    **simulate_mutual_parms
 )
-
-# simulation.generate_sed(
-#     scat=True,
-#     freq_min=5e1, freq_max=5e2, nlam=10,
-#     **simulate_mutual_parms
-# )
-
-# simulation.generate_line_spectrum(
-#     nodust=False, scat=True, extract_gas=True,
-#     nlam=10,
-#     **simulate_mutual_parms
-# )
 
 
 distance = 140 # distance in pc

@@ -1288,7 +1288,7 @@ class DiskFitting:
         # leave the arguements for minimize here for better flexibility
         self.default_kwargs_for_minimize = {
             'x0':[np.log(0.14*Msun), np.log(30*au), np.log(5e-7*Msun/yr)],
-            'bounds': ((np.log(0.10*Msun),np.log(0.20*Msun)), (np.log(10*au),np.log(40*au)), (np.log(0.1e-7*Msun/yr), np.log(20e-7*Msun/yr))),
+            'bounds': ((np.log(0.05*Msun),np.log(5*Msun)), (np.log(10*au),np.log(40*au)), (np.log(1e-8*Msun/yr), np.log(1e-5*Msun/yr))),
             'options':{'maxiter':1e3, 'disp':False},
             'method':'Powell'
         }
@@ -1321,7 +1321,7 @@ class DiskFitting:
         self,
         Mdot_fn=const_Mdot_over_Mstar,
         Mdot_arg = 1e-5/yr,
-        Q=1.5,
+        Q=.5,
         weights=None,
         kwargs_for_minimize=None,
         ):
