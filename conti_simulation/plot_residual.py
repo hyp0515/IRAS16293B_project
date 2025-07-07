@@ -4,8 +4,6 @@ from matplotlib.patches import Ellipse
 from scipy import ndimage
 import warnings
 import sys
-sys.path.append('..')
-from iras16293b.data_list import data_dict
 
 from astropy.io import fits
 from astropy.wcs import WCS
