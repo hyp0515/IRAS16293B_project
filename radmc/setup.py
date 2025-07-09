@@ -251,7 +251,7 @@ class radmc3d_setup:
                 print( 'get_continuumlambda: Re-creating {} using default wavelengths.'.format(default_filename))
             else:
                 pass
-            lam1,lam2,lam3,lam4 = 0.1e0, 1.0e2, 5.0e3, 1.0e4
+            lam1,lam2,lam3,lam4 = 0.5e0, 5.0e2, 5.0e3, 5.0e4
             n12, n23, n34       = 100, 100, 50
             lam12    = np.logspace(np.log10(lam1),np.log10(lam2),n12,endpoint=False)
             lam23    = np.logspace(np.log10(lam2),np.log10(lam3),n23,endpoint=False)
@@ -791,7 +791,7 @@ class radmc3d_setup:
         nlam = 101
         nang = 90
 
-        lam = np.logspace(-1, 4, nlam, endpoint=True)  # Wavelengths in microns
+        lam = np.logspace(np.log10(0.5), np.log10(5e4), nlam, endpoint=True)  # Wavelengths in microns
         ang = np.linspace(0, 90, nang, endpoint=True)  # Angles in degrees
 
         k_orth = 1 + 0.1*(1-(np.cos(np.deg2rad(ang))**2))  # Orthogonal component of kappa

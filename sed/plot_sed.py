@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-data = [
+HG_19_data = [
     {"Freq": 3.0, "Bmaj": 1.10, "Bmin": 0.46, "BPa": -20.7, "rms": 0.013, "S_B": 0.052, "sigma": 0.005},
     {"Freq": 10.0, "Bmaj": 0.35, "Bmin": 0.14, "BPa": -17.5, "rms": 0.014, "S_B": 1.08, "sigma": 0.11},
     {"Freq": 15.0, "Bmaj": 0.23, "Bmin": 0.10, "BPa": 19.6, "rms": 0.008, "S_B": 2.64, "sigma": 0.26},
@@ -26,24 +26,35 @@ data = [
     {"Freq": 695.0, "Bmaj": 0.29, "Bmin": 0.16, "BPa": -70.4, "rms": 19.90, "S_B": 13.5e3, "sigma": 2.7e3},
 ]
 
+this_work_data = [
+    {"Freq": 16.7,  "Bmaj": 0.23, "Bmin": 0.09, "BPa":  5.19, "rms": 0.047, "S_B":    2.204, "sigma": 0.166},
+    {"Freq": 42.8,  "Bmaj": 0.39, "Bmin": 0.25, "BPa": 73.75, "rms": 0.047, "S_B":   32.406, "sigma": 0.327},
+    {"Freq": 99.9,  "Bmaj": 0.05, "Bmin": 0.04, "BPa": 79.33, "rms": 0.017, "S_B":  213.512, "sigma": 2.633},
+    {"Freq": 230.6, "Bmaj": 0.11, "Bmin": 0.07, "BPa": -88.2, "rms": 0.104, "S_B": 1165.770, "sigma": 8.886}
+]
+
 # Extracting data for plotting
-freqs = np.array([d["Freq"] for d in data])
-S_B = np.array([d["S_B"] for d in data])
-sigma = np.array([d["sigma"] for d in data])
+freqs_HG19 = np.array([d["Freq"] for d in HG_19_data])
+S_B_HG19   = np.array([d["S_B"] for d in HG_19_data])
+sigma_HG19 = np.array([d["sigma"] for d in HG_19_data])
+freqs_this_work = np.array([d["Freq"] for d in this_work_data])
+S_B_this_work   = np.array([d["S_B"] for d in this_work_data])
+sigma_this_work = np.array([d["sigma"] for d in this_work_data])
+
 # Plotting the data
-plt.figure(figsize=(6, 10))
-plt.errorbar(freqs, S_B, yerr=sigma, fmt='o', color='blue', ecolor='lightblue', elinewidth=2, capsize=4, label='Hernández-Gómez et al. 2019')
-plt.errorbar(230.610, 1165.770, yerr=8.886, fmt='o', color='r', ecolor='r', elinewidth=2, capsize=4, label='ALMA Band 6')
-plt.errorbar(99.931, 213.512, yerr=2.633, fmt='o', color='r', ecolor='r', elinewidth=2, capsize=4, label='ALMA Band 3')
-plt.errorbar(42.827, 32.406, yerr=0.327, fmt='o', color='r', ecolor='r', elinewidth=2, capsize=4, label='JVLA Q band')
-plt.errorbar(16.655, 2.204, yerr=0.166, fmt='o', color='r', ecolor='r', elinewidth=2, capsize=4, label='JVLA Ku band')
-plt.xscale('log'); plt.xlim((5e-1, 1e3))
-plt.yscale('log'); plt.ylim((1e-2, 2e5))
-plt.xlabel('Frequency (GHz)', fontsize=14)
-plt.ylabel('Flux Density (mJy)', fontsize=14)
-plt.title('Spectral Energy Distribution (SED)', fontsize=16)
-plt.grid(True, which='major', linestyle='--', linewidth=0.5)
-plt.legend()
-plt.tight_layout()
-plt.savefig('sed_plot.pdf')
-plt.show()
+if __name__ == "__main__":
+    plt.figure(figsize=(6, 10))
+    plt.errorbar(freqs_HG19, S_B_HG19, yerr=sigma_HG19, fmt='o', 
+                color='blue', ecolor='lightblue', elinewidth=2, capsize=4, label='Hernández-Gómez et al. 2019')
+    plt.errorbar(freqs_this_work, S_B_this_work, yerr=sigma_this_work, fmt='o', 
+                color='r', ecolor='r', elinewidth=2, capsize=4, label='This Work')
+    plt.xscale('log'); plt.xlim((5e-1, 1e3))
+    plt.yscale('log'); plt.ylim((1e-2, 2e5))
+    plt.xlabel('Frequency (GHz)', fontsize=14)
+    plt.ylabel('Flux Density (mJy)', fontsize=14)
+    plt.title('Spectral Energy Distribution (SED)', fontsize=16)
+    plt.grid(True, which='major', linestyle='--', linewidth=0.5)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig('sed_plot.pdf', transparent=True)
+    plt.show()
