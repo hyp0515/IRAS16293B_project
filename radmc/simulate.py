@@ -136,7 +136,8 @@ class generate_simulation:
                            npix     = 200,
                            sizeau   = 100,
                            posang   = 45,
-                           scat     = True, 
+                           scat     = True,
+                           stokes   = True, 
                            **kwargs):
         """
         This function will generate a continuum image.
@@ -167,9 +168,13 @@ class generate_simulation:
         
         f = '_scat'
         
+        if stokes is True:
+            prompt = prompt + ' stokes'
+            f += '_stokes'
         if scat is False:
             prompt = prompt + ' noscat'
             f = '_noscat'
+        
         os.system(prompt)
         
         
