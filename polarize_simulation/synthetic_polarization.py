@@ -52,7 +52,7 @@ model.get_heatcontrol(L_star=l_star, # Lsun
                       heat=heating) # radiation/accretion
 
 model.write_dust_opac(inputstyle=20, grain_align=True)
-model.get_dustalignmentcontrol(alpha=1e-33, hourglass=False, uniform_z=True, uniform_x=False, uniform_y=False)
+model.get_dustalignmentcontrol(alpha=1e-50, hourglass=False, uniform_z=False, uniform_x=False, uniform_y=False)
 
 
 
