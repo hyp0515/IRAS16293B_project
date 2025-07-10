@@ -759,43 +759,95 @@ class radmc3d_setup:
     
     def get_dustalignmentcontrol(self,
                                  alpha=1e-33,
-                                 hourglass=True,
+                                 hourglass=False,
+                                 uniform_x=False,
+                                 uniform_y=False,
                                  uniform_z=True,):
       
-        R_mesh, Theta_mesh = np.meshgrid(self.DM.r_sph*au, self.DM.theta_sph, indexing='ij')
+        # R_mesh, Theta_mesh = np.meshgrid(self.DM.r_sph*au, self.DM.theta_sph, indexing='ij')
 
-        Br = np.zeros_like(R_mesh)
-        Btheta = np.zeros_like(Theta_mesh)
-        Bphi = 0
+        # Br = np.zeros_like(R_mesh)
+        # Btheta = np.zeros_like(Theta_mesh)
+        # Bphi = 0
 
-        if uniform_z is True:
-            Br += np.cos(Theta_mesh)
-            Btheta += -np.sin(Theta_mesh)
+        # if uniform_z is True:
+        #     Br = np.cos(Theta_mesh)
+        #     Btheta = -np.sin(Theta_mesh)
+        
+        # if hourglass is True:
+        #     Br = alpha*(R_mesh**2)*(np.sin(Theta_mesh)**2)*np.cos(Theta_mesh)*\
+        #         np.exp(-alpha*(R_mesh**2)*(np.cos(Theta_mesh)**2)) + np.cos(Theta_mesh)
+        #     Btheta = alpha*(R_mesh**2)*(np.cos(Theta_mesh)**2)*np.sin(Theta_mesh)*\
+        #         np.exp(-alpha*(R_mesh**2)*(np.cos(Theta_mesh)**2)) - np.sin(Theta_mesh)
+
+        
+        
+        # with open(f'grainalign_dir.inp','w+') as f:
+        #     f.write('1\n')
+        #     f.write('%d\n'%(self.NR*self.NTheta*self.NPhi))
+        #     # for idx_phi in range(self.NPhi):
+        #     #     for idx_theta in range(self.NTheta):
+        #     #         for idx_r in range(self.NR):
+        #     #             f.write('%13.6e %13.6e %13.6e \n'%(Br[idx_r, idx_theta],Btheta[idx_r, idx_theta], Bphi))
+        #     for ix in range(self.NPhi):
+        #         for iy in range(self.NTheta):
+        #             for iz in range(self.NR):
+        #                 f.write('%13.6e %13.6e %13.6e\n' % (
+        #                     Br[ix, iy],Btheta[ix, iy], Bphi))
+        
+        R_mesh, Theta_mesh, Phi_mesh = np.meshgrid(self.DM.r_sph*au, self.DM.theta_sph, self.DM.phi_sph, indexing='ij')
+        
+        XX = R_mesh * np.sin(Theta_mesh) * np.cos(Phi_mesh)
+        YY = R_mesh * np.sin(Theta_mesh) * np.sin(Phi_mesh)
+        ZZ = R_mesh * np.cos(Theta_mesh)
+
+        alvec = np.zeros((self.NR, self.NTheta, self.NPhi, 3))
+
+        # Initialize Bx, By, Bz with zeros
+        Bx = np.zeros_like(XX)
+        By = np.zeros_like(YY)
+        Bz = np.zeros_like(ZZ)
+
+        if uniform_x is True: 
+            Bx += 1
+        if uniform_y is True: 
+            By += 1
+        if uniform_z is True: 
+            Bz += 1
         
         if hourglass is True:
-            Br += alpha*(R_mesh**2)*(np.sin(Theta_mesh)**2)*np.cos(Theta_mesh)*\
-                np.exp(-alpha*(R_mesh**2)*(np.cos(Theta_mesh)**2))
-            Btheta += alpha*(R_mesh**2)*(np.cos(Theta_mesh)**2)*np.sin(Theta_mesh)*\
-                np.exp(-alpha*(R_mesh**2)*(np.cos(Theta_mesh)**2))
+            Bx += alpha * XX * ZZ * np.exp(-alpha * (ZZ ** 2))
+            By += alpha * YY * ZZ * np.exp(-alpha * (ZZ ** 2))
 
-        
-        
-        with open(f'grainalign_dir.inp','w+') as f:
-            f.write('1\n')
-            f.write('%d\n'%(self.NR*self.NTheta*self.NPhi))
-            for idx_phi in range(self.NPhi):
-                for idx_theta in range(self.NTheta):
-                    for idx_r in range(self.NR):
-                        f.write('%13.6e %13.6e %13.6e \n'%(Br[idx_r, idx_theta],Btheta[idx_r, idx_theta], Bphi))
-        
+
+        alvec[:, :, :, 0] = Bx / np.sqrt(Bx**2 + By**2 + Bz**2)
+        alvec[:, :, :, 1] = By / np.sqrt(Bx**2 + By**2 + Bz**2)
+        alvec[:, :, :, 2] = Bz / np.sqrt(Bx**2 + By**2 + Bz**2)
+
+        with open('grainalign_dir.inp', 'w+') as f:
+            f.write('1\n')                       # Format number
+            f.write('%d\n' % (self.NR*self.NTheta*self.NPhi))           # Nr of cells
+            for ix in range(self.NR):
+                for iy in range(self.NTheta):
+                    for iz in range(self.NPhi):
+                        f.write('%13.6e %13.6e %13.6e\n' % (
+                            alvec[ix, iy, iz, 0], alvec[ix, iy, iz, 1], alvec[ix, iy, iz, 2]))
+
+
         nlam = 101
         nang = 90
 
-        lam = np.logspace(np.log10(0.5), np.log10(5e4), nlam, endpoint=True)  # Wavelengths in microns
+        lam = np.logspace(np.log10(5e-1), np.log10(5e4), nlam, endpoint=True)  # Wavelengths in microns
         ang = np.linspace(0, 90, nang, endpoint=True)  # Angles in degrees
 
         k_orth = 1 + 0.1*(1-(np.cos(np.deg2rad(ang))**2))  # Orthogonal component of kappa
         k_para = 1 - 0.1*(1-(np.cos(np.deg2rad(ang))**2))  # Parallel component of kappa
+
+        # k_orth = np.ones(nang)  # Orthogonal component of kappa
+        # k_para = 1 - np.sin(np.deg2rad(ang))  # Parallel component of kappa
+
+        # k_orth = np.ones(nang)  # Orthogonal component of kappa
+        # k_para = np.ones(nang)  # Parallel component of kappa
 
         for i, dust in enumerate(self.dust_type):
             with open(f'dustkapalignfact_{dust}.inp','w+') as f:

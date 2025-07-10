@@ -11,11 +11,11 @@ from radmc.simulate import generate_simulation
 from radmc.plot import generate_plot
 
 
-amax        = 1 # maximum grain size in mm
+amax        = .3 # maximum grain size in mm
 mstar       = 0.5 # stellar mass in solar masses
 mdot        = 5e-5 # accretion rate in solar masses per year
 rd          = 50 # disk radius in AU
-Toomre_Q    = 0.4 # Toomre Q parameter
+Toomre_Q    = 0.3 # Toomre Q parameter
 l_star      = .1 # stellar luminosity in solar luminosities
 heating     = 'accretion' # heating mechanism
 
@@ -45,14 +45,14 @@ model.get_diskcontrol(  d_to_g_ratio    = 0.01,
                         Q               = Toomre_Q, # Toomre Q
                         NR    =200,
                         NTheta=200,
-                        NPhi  =20,
+                        NPhi  =100,
                         )
 model.get_heatcontrol(L_star=l_star, # Lsun
                       R_star=1,
                       heat=heating) # radiation/accretion
 
 model.write_dust_opac(inputstyle=20, grain_align=True)
-model.get_dustalignmentcontrol(alpha=1e-33, hourglass=True, uniform_z=True)
+model.get_dustalignmentcontrol(alpha=1e-33, hourglass=False, uniform_z=True, uniform_x=False, uniform_y=False)
 
 
 
@@ -113,7 +113,7 @@ ax[4].set_title('Polarization Angle + 90 deg')
 ax[5].imshow(polfrac.T, origin='lower', cmap="viridis", vmin=0, vmax=0.1)
 ax[5].set_title('Polarization Fraction')
 
-y, x = np.mgrid[0:conv_image.imageJyppix.shape[0], 0:conv_image.imageJyppix.shape[1]]
+y, x = np.mgrid[0:model_img.imageJyppix.shape[0], 0:model_img.imageJyppix.shape[1]]
 step = 20
 x_ds, y_ds = x[::step, ::step], y[::step, ::step]
 polfrac_ds = polfrac[::step, ::step]
@@ -122,7 +122,8 @@ polang_ds = polang[::step, ::step]
 u = polfrac_ds * np.cos(polang_ds) / 0.01
 v = polfrac_ds * np.sin(polang_ds) / 0.01
 
-ax[0].quiver(x_ds, y_ds, u, v, color='white', scale=50, headlength=0, headaxislength=0, headwidth=0)
+ax[0].quiver(x_ds, y_ds, u, v, color='white', scale=200, headlength=0, headaxislength=0, headwidth=0)
 
 
 plt.savefig('test.pdf', transparent=True)
+plt.close()

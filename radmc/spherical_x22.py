@@ -294,3 +294,4 @@ class DiskModel_spherical:
         theta_sph_grid[self.NTheta//2] = np.pi/2
         self.theta_sph_grid = theta_sph_grid
         self.phi_sph_grid = np.linspace(0, 2*np.pi, self.NPhi+1)
+        self.phi_sph = (self.phi_sph_grid[:-1] + self.phi_sph_grid[1:]) / 2
