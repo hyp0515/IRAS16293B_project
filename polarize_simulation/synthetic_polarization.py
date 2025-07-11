@@ -69,6 +69,8 @@ simulate_mutual_parms = {
 
 
 
+
+
 simulation.generate_continuum(
    scat=True,
    wav=3000,
