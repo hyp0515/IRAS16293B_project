@@ -170,7 +170,7 @@ class generate_simulation:
         
         if stokes is True:
             prompt = prompt + ' stokes'
-            f += '_stokes'
+            f = f + '_stokes'
         if scat is False:
             prompt = prompt + ' noscat'
             f = '_noscat'

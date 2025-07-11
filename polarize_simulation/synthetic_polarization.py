@@ -8,10 +8,9 @@ from radmc3dPy.analyze import *
 sys.path.append('..')
 from radmc.setup import radmc3d_setup
 from radmc.simulate import generate_simulation
-from radmc.plot import generate_plot
 
 
-amax        = .3 # maximum grain size in mm
+amax        = .1 # maximum grain size in mm
 mstar       = 0.5 # stellar mass in solar masses
 mdot        = 5e-5 # accretion rate in solar masses per year
 rd          = 50 # disk radius in AU
@@ -31,7 +30,7 @@ model.get_mastercontrol(filename=None,
                         istar_sphere=1,
                         num_cpu=None,
                         modified_random_walk = 1,
-                        alignment_mode=-1, # 1 for grain alignment
+                        alignment_mode=1, # 1 for grain alignment
                         )
 model.get_continuumlambda(filename=None,
                         comment=None,
@@ -52,7 +51,7 @@ model.get_heatcontrol(L_star=l_star, # Lsun
                       heat=heating) # radiation/accretion
 
 model.write_dust_opac(inputstyle=20, grain_align=True)
-model.get_dustalignmentcontrol(alpha=1e-50, hourglass=False, uniform_z=False, uniform_x=False, uniform_y=False)
+model.get_dustalignmentcontrol()
 
 
 
@@ -64,11 +63,8 @@ simulate_mutual_parms = {
     "sizeau"    : 150,
     "posang"    : 0,
     "dir"       : './test/',
-    "fname"     : 'test',
+    "fname"     : 'uniform_z',
 }
-
-
-
 
 
 simulation.generate_continuum(
@@ -91,6 +87,9 @@ beam_area = beam_axis[0]*beam_axis[1]*np.pi/(4*np.log(2))
 f_dir  = simulate_mutual_parms['dir']
 f_name = simulate_mutual_parms['fname']
 
+
+
+
 model_img = image.readImage(fname=f'./{f_dir}/outfile/conti_{f_name}_scat_stokes.out')
 
 conv_image = model_img.imConv(dpc=distance, fwhm=beam_axis, pa=-79.32)
@@ -103,6 +102,11 @@ for i in range(4):
 
 polang  = 0.5 * np.arctan2(conv_image.imageJyppix[:, :, 2, 0], conv_image.imageJyppix[:, :, 1, 0]) + np.pi / 2
 polfrac = np.sqrt(conv_image.imageJyppix[:, :, 1, 0]**2 + conv_image.imageJyppix[:, :, 2, 0]**2) / conv_image.imageJyppix[:, :, 0, 0]
+
+
+
+
+
 
 fig, ax = plt.subplots(1, 6, figsize=(24, 4), sharex=True, sharey=True)
 ax = ax.flatten()
@@ -127,5 +131,5 @@ v = polfrac_ds * np.sin(polang_ds) / 0.01
 ax[0].quiver(x_ds, y_ds, u, v, color='white', scale=200, headlength=0, headaxislength=0, headwidth=0)
 
 
-plt.savefig('test.pdf', transparent=True)
+plt.savefig('uniform_z.pdf', transparent=True)
 plt.close()
