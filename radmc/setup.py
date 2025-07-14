@@ -85,7 +85,9 @@ class radmc3d_setup:
     
     def __del__(self):
         pass
+    #
     ##### methods in this class #########################
+    #
     def get_mastercontrol(self, filename = None,
                               comment    = None,
                               incl_dust  = None,
@@ -159,35 +161,6 @@ class radmc3d_setup:
 
         self.filename = filename
 
-    def get_linecontrol(self, filename = None,
-                               comment = None,
-                              **kwargs):
-        '''
-        Preparing the control file for lines.
-
-        Input :
-        
-        filename (string) : output filename. (default: lines.inp).
-                            It will still creat a file with default name,
-                            but will duplicate an output file with the specified name.
-        See example for how to include lines
-
-        '''
-        # setting variables 
-        num_lines = len( kwargs.items() )
-
-        # writing variables to output file
-        default_filename = 'lines.inp'
-        with open(default_filename, 'w+') as f:
-            f.write('2\n')
-            f.write('{}\n'.format(num_lines))
-            for k, v in kwargs.items():
-                f.write('{}\n'.format(v))
-
-        # duplicate output file
-        if filename != None:
-            self.duplicate_file(default_filename, filename, comment = comment, timemark = self.now)
-    
     def get_continuumlambda(self, filename = None,
                                   comment = None,
                                   lambda_micron = None,
@@ -446,7 +419,9 @@ class radmc3d_setup:
             for value in self.DM.phi_sph_grid:
                 f.write('%13.13e\n'%(value))
     
-    def write_dust_opac(self, inputstyle = 10, grain_align = True):    
+    def write_dust_opac(self, 
+                        inputstyle=10, 
+                        grain_align=True):    
         '''
         Preparing the control file for dust opacity.
         '''
@@ -519,54 +494,6 @@ class radmc3d_setup:
                 data.tofile(f, sep='\n', format="%13.6e")
                 f.write('\n')
             f.write('\n')
-
-    def get_vfieldcontrol(self, Kep = True,
-                            vinfall = None,
-                                Rcb = None,
-                            outflow = None
-                        ):
-        '''
-        Preparing the control file for velocity field.
-
-        Parameters
-        ----------------------------
-        Kep : bool
-            Keplerian azimuthal velocity field
-        vinfall : float
-            Infall velocity (unit: Keplerian velocity) e.g., 1 for 1 Keplerian velocity of infall direction
-        Rcb : float
-            Centrifugal barrier (unit: AU)
-        outflow : float
-            Outflow velocity (unit: Keplerian velocity)
-        '''
-        if vinfall is None: vinfall = 0
-        
-        self.rcb = Rcb
-        if Rcb is None:
-            vr        = -vinfall*np.sqrt(G*self.Mstar*Msun/(self.DM.r_sph*au)) # Infall velocity
-            vtheta    = 0  # No vertical movement in this version
-            if Kep is True:
-                vphi    = np.sqrt(G*self.Mstar*Msun/(self.DM.r_sph*au))    # Keplerian velocity
-            elif Kep is False:
-                vphi    = np.zeros(vr.shape)
-        elif Rcb is not None:  # velocity field in Oya et al. 2014
-            rcb_idx   = np.searchsorted(self.DM.r_sph, Rcb)
-            if outflow is None:
-                vr_inside    = np.zeros(self.DM.r_sph[:rcb_idx].shape)  # no infall compoonent inside the centrifugal barrier
-            elif outflow is not None:
-                vr_inside    = +outflow*np.sqrt(G*self.Mstar*Msun/(self.DM.r_sph[:rcb_idx]*au))  # if expanding
-            vr_infall = -vinfall*np.sqrt(G*self.Mstar*Msun/(self.DM.r_sph[rcb_idx:]*au))
-            vr        = np.concatenate((vr_inside, vr_infall))
-            vtheta    = 0
-            vphi      = np.sqrt(G*self.Mstar*Msun/(self.DM.r_sph*au))
-            
-        with open('gas_velocity.inp','w+') as f:
-            f.write('1\n')
-            f.write('%d\n'%(self.NR*self.NTheta*self.NPhi))
-            for idx_phi in range(self.NPhi):
-                for idx_theta in range(self.NTheta):
-                    for idx_r in range(self.NR):
-                        f.write('%13.6e %13.6e %13.6e \n'%(vr[idx_r],vtheta,vphi[idx_r]))
 
     def get_heatcontrol(self, L_star = None,
                               R_star = None,
@@ -688,7 +615,166 @@ class radmc3d_setup:
                 data.tofile(f, sep='\n', format="%13.6e")
                 f.write('\n')
         self.T_dust = T
-    
+
+    def get_dustalignmentcontrol(self,
+                                 alpha=1e-33,
+                                 hourglass=False,
+                                 uniform_x=False,
+                                 uniform_y=False,
+                                 uniform_z=False,
+                                 toroidal=False):
+        
+        R_mesh, Theta_mesh, Phi_mesh = np.meshgrid(self.DM.r_sph*au, self.DM.theta_sph, self.DM.phi_sph, indexing='ij')
+        
+        XX = R_mesh * np.sin(Theta_mesh) * np.cos(Phi_mesh)
+        YY = R_mesh * np.sin(Theta_mesh) * np.sin(Phi_mesh)
+        ZZ = R_mesh * np.cos(Theta_mesh)
+
+        alvec = np.zeros((self.NR, self.NTheta, self.NPhi, 3))
+
+        Bx = np.zeros_like(XX)
+        By = np.zeros_like(YY)
+        Bz = np.zeros_like(ZZ)
+
+        if uniform_x is True: Bx += 1
+        if uniform_y is True: By += 1
+        if uniform_z is True: Bz += 1
+
+        if hourglass is True:
+            Bx += alpha * XX * ZZ * np.exp(-alpha * ZZ**2)
+            By += alpha * YY * ZZ * np.exp(-alpha * ZZ**2)
+
+        if toroidal is True:
+            Bx += YY
+            By += -XX
+
+
+        alvec[:, :, :, 0] = Bx / np.sqrt(Bx**2 + By**2 + Bz**2)
+        alvec[:, :, :, 1] = By / np.sqrt(Bx**2 + By**2 + Bz**2)
+        alvec[:, :, :, 2] = Bz / np.sqrt(Bx**2 + By**2 + Bz**2)
+
+
+        with open('grainalign_dir.inp', 'w+') as f:
+            f.write('1\n')                       # Format number
+            f.write('%d\n' % (self.NR*self.NTheta*self.NPhi))
+            for ix in range(self.NR):           # Nr of cells
+                for iy in range(self.NTheta):
+                    for iz in range(self.NPhi):
+                        f.write('%13.6e %13.6e %13.6e\n' % (
+                            alvec[ix, iy, iz, 0], alvec[ix, iy, iz, 1], alvec[ix, iy, iz, 2]))
+
+
+        nlam = 101
+        nang = 90
+
+        lam = np.logspace(np.log10(5e-1), np.log10(5e4), nlam, endpoint=True)  # Wavelengths in microns
+        ang = np.linspace(0, 90, nang, endpoint=True)  # Angles in degrees
+
+        k_orth = 1 + 0.1*(1-np.cos(np.radians(ang))**2)  # Orthogonal component of kappa
+        k_para = 1 - 0.1*(1-np.cos(np.radians(ang))**2)  # Parallel component of kappa
+
+        # k_orth = np.ones(nang)  # Orthogonal component of kappa
+        # k_para = 1 - np.sin(np.deg2rad(ang))  # Parallel component of kappa
+
+        # k_orth = np.ones(nang)  # Orthogonal component of kappa
+        # k_para = np.ones(nang)  # Parallel component of kappa
+
+        for i, dust in enumerate(self.dust_type):
+            with open(f'dustkapalignfact_{dust}.inp','w+') as f:
+                f.write('1\n')
+                f.write('%d\n'%(nlam))
+                f.write('%d\n\n'%(nang))
+                for value in lam:
+                    f.write('%13.6e\n'%(value))
+                f.write('\n')
+                for value in ang:
+                    f.write('%13.6e\n'%(value))
+                f.write('\n')
+                for inu in range(nlam):
+                    for imu in range(nang):
+                        f.write('%13.6e %13.6e\n'%(k_orth[imu],k_para[imu]))
+                    f.write('\n')
+
+    #
+    # Unused functions in this project, but kept for compatibility
+    #
+    def get_linecontrol(self, filename = None,
+                               comment = None,
+                              **kwargs):
+        '''
+        Preparing the control file for lines.
+
+        Input :
+        
+        filename (string) : output filename. (default: lines.inp).
+                            It will still creat a file with default name,
+                            but will duplicate an output file with the specified name.
+        See example for how to include lines
+
+        '''
+        # setting variables 
+        num_lines = len( kwargs.items() )
+
+        # writing variables to output file
+        default_filename = 'lines.inp'
+        with open(default_filename, 'w+') as f:
+            f.write('2\n')
+            f.write('{}\n'.format(num_lines))
+            for k, v in kwargs.items():
+                f.write('{}\n'.format(v))
+
+        # duplicate output file
+        if filename != None:
+            self.duplicate_file(default_filename, filename, comment = comment, timemark = self.now)
+
+    def get_vfieldcontrol(self, Kep = True,
+                            vinfall = None,
+                                Rcb = None,
+                            outflow = None
+                        ):
+        '''
+        Preparing the control file for velocity field.
+
+        Parameters
+        ----------------------------
+        Kep : bool
+            Keplerian azimuthal velocity field
+        vinfall : float
+            Infall velocity (unit: Keplerian velocity) e.g., 1 for 1 Keplerian velocity of infall direction
+        Rcb : float
+            Centrifugal barrier (unit: AU)
+        outflow : float
+            Outflow velocity (unit: Keplerian velocity)
+        '''
+        if vinfall is None: vinfall = 0
+        
+        self.rcb = Rcb
+        if Rcb is None:
+            vr        = -vinfall*np.sqrt(G*self.Mstar*Msun/(self.DM.r_sph*au)) # Infall velocity
+            vtheta    = 0  # No vertical movement in this version
+            if Kep is True:
+                vphi    = np.sqrt(G*self.Mstar*Msun/(self.DM.r_sph*au))    # Keplerian velocity
+            elif Kep is False:
+                vphi    = np.zeros(vr.shape)
+        elif Rcb is not None:  # velocity field in Oya et al. 2014
+            rcb_idx   = np.searchsorted(self.DM.r_sph, Rcb)
+            if outflow is None:
+                vr_inside    = np.zeros(self.DM.r_sph[:rcb_idx].shape)  # no infall compoonent inside the centrifugal barrier
+            elif outflow is not None:
+                vr_inside    = +outflow*np.sqrt(G*self.Mstar*Msun/(self.DM.r_sph[:rcb_idx]*au))  # if expanding
+            vr_infall = -vinfall*np.sqrt(G*self.Mstar*Msun/(self.DM.r_sph[rcb_idx:]*au))
+            vr        = np.concatenate((vr_inside, vr_infall))
+            vtheta    = 0
+            vphi      = np.sqrt(G*self.Mstar*Msun/(self.DM.r_sph*au))
+            
+        with open('gas_velocity.inp','w+') as f:
+            f.write('1\n')
+            f.write('%d\n'%(self.NR*self.NTheta*self.NPhi))
+            for idx_phi in range(self.NPhi):
+                for idx_theta in range(self.NTheta):
+                    for idx_r in range(self.NR):
+                        f.write('%13.6e %13.6e %13.6e \n'%(vr[idx_r],vtheta,vphi[idx_r]))
+
     def get_gasdensitycontrol(self, 
                                  abundance   = 1e-10,
                                  snowline    = None,
@@ -756,105 +842,7 @@ class radmc3d_setup:
             data = nch3oh.ravel(order='F')          # Create a 1-D view, fortran-style indexing
             data.tofile(f, sep='\n', format="%13.6e")
             f.write('\n')
-    
-    def get_dustalignmentcontrol(self,
-                                 alpha=1e-33,
-                                 hourglass=False,
-                                 uniform_x=False,
-                                 uniform_y=False,
-                                 uniform_z=True,):
-        
-        R_mesh, Theta_mesh = np.meshgrid(self.DM.r_sph*au, self.DM.theta_sph, indexing='ij')
 
-        Br = np.zeros_like(R_mesh)
-        Btheta = np.zeros_like(Theta_mesh)
-        Bphi = 1
-
-        # if uniform_z is True:
-        #     Br = np.cos(Theta_mesh)
-        #     Btheta = -np.sin(Theta_mesh)
-        
-        # if hourglass is True:
-        #     Br = alpha*(R_mesh**2)*(np.sin(Theta_mesh)**2)*np.cos(Theta_mesh)*\
-        #         np.exp(-alpha*(R_mesh**2)*(np.cos(Theta_mesh)**2)) + np.cos(Theta_mesh)
-        #     Btheta = alpha*(R_mesh**2)*(np.cos(Theta_mesh)**2)*np.sin(Theta_mesh)*\
-        #         np.exp(-alpha*(R_mesh**2)*(np.cos(Theta_mesh)**2)) - np.sin(Theta_mesh)
-
-        
-        
-        with open(f'grainalign_dir.inp','w+') as f:
-            f.write('1\n')
-            f.write('%d\n'%(self.NR*self.NTheta*self.NPhi))
-            # for idx_phi in range(self.NPhi):
-            #     for idx_theta in range(self.NTheta):
-            #         for idx_r in range(self.NR):
-            #             f.write('%13.6e %13.6e %13.6e \n'%(Br[idx_r, idx_theta],Btheta[idx_r, idx_theta], Bphi))
-            for iz in range(self.NR):
-            
-                for iy in range(self.NTheta):
-                    for ix in range(self.NPhi):
-                        f.write('%13.6e %13.6e %13.6e\n' % (
-                            Br[ix, iy],Btheta[ix, iy], Bphi))
-
-
-        # R_mesh, Theta_mesh, Phi_mesh = np.meshgrid(self.DM.r_sph*au, self.DM.theta_sph, self.DM.phi_sph, indexing='ij')
-        
-        # XX = R_mesh * np.sin(Theta_mesh) * np.cos(Phi_mesh)
-        # YY = R_mesh * np.sin(Theta_mesh) * np.sin(Phi_mesh)
-        # ZZ = R_mesh * np.cos(Theta_mesh)
-
-        # alvec = np.zeros((self.NR, self.NTheta, self.NPhi, 3))
-
-        # Bx = YY
-        # By = -XX
-        # Bz = 0
-
-        # alvec[:, :, :, 0] = Bx / np.sqrt(Bx**2 + By**2 + Bz**2)
-        # alvec[:, :, :, 1] = By / np.sqrt(Bx**2 + By**2 + Bz**2)
-        # alvec[:, :, :, 2] = Bz / np.sqrt(Bx**2 + By**2 + Bz**2)
-
-
-        # with open('grainalign_dir.inp', 'w+') as f:
-        #     f.write('1\n')                       # Format number
-        #     f.write('%d\n' % (self.NR*self.NTheta*self.NPhi))
-        #     for ix in range(self.NR):           # Nr of cells
-        #         for iy in range(self.NTheta):
-        #             for iz in range(self.NPhi):
-        #                 f.write('%13.6e %13.6e %13.6e\n' % (
-        #                     alvec[ix, iy, iz, 0], alvec[ix, iy, iz, 1], alvec[ix, iy, iz, 2]))
-
-
-        nlam = 101
-        nang = 90
-
-        lam = np.logspace(np.log10(5e-1), np.log10(5e4), nlam, endpoint=True)  # Wavelengths in microns
-        ang = np.linspace(0, 90, nang, endpoint=True)  # Angles in degrees
-
-        # k_orth = 1 + 0.1*(1-(np.cos(np.deg2rad(ang))**2))  # Orthogonal component of kappa
-        # k_para = 1 - 0.1*(1-(np.cos(np.deg2rad(ang))**2))  # Parallel component of kappa
-
-        k_orth = np.ones(nang)  # Orthogonal component of kappa
-        k_para = 1 - np.sin(np.deg2rad(ang))  # Parallel component of kappa
-
-        # k_orth = np.ones(nang)  # Orthogonal component of kappa
-        # k_para = np.ones(nang)  # Parallel component of kappa
-
-        for i, dust in enumerate(self.dust_type):
-            with open(f'dustkapalignfact_{dust}.inp','w+') as f:
-                f.write('1\n')
-                f.write('%d\n'%(nlam))
-                f.write('%d\n\n'%(nang))
-                for value in lam:
-                    f.write('%13.6e\n'%(value))
-                f.write('\n')
-                for value in ang:
-                    f.write('%13.6e\n'%(value))
-                f.write('\n')
-                for inu in range(nlam):
-                    for imu in range(nang):
-                        f.write('%13.6e %13.6e\n'%(k_orth[imu],k_para[imu]))
-                    f.write('\n')
-    
     def duplicate_file(self, default_filename, filename, comment = None, timemark = None):
         '''
         A small function to duplicate the .inp files.

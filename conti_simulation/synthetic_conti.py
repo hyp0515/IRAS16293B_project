@@ -83,10 +83,10 @@ beam_area = beam_axis[0]*beam_axis[1]*np.pi/(4*np.log(2))
 f_dir  = simulate_mutual_parms['dir']
 f_name = simulate_mutual_parms['fname']
 
-model_img = image.readImage(fname=f'./{f_dir}/outfile/conti_{f_name}_scat.out')
+model_img = image.readImage(fname=f'./{f_dir}/outfile/conti_{f_name}_scat_stokes.out')
 conv_image = model_img.imConv(dpc=distance, fwhm=beam_axis, pa=-79.32)
 conv_image.imageJyppix *= beam_area/pixel_area/(distance**2)
 
-plt.imshow(conv_image.imageJyppix[:, :, 0].T, origin='lower', cmap="magma", vmin=0, vmax=0.008)
+plt.imshow(conv_image.imageJyppix[:, :, 0, 0].T, origin='lower', cmap="magma", vmin=0, vmax=0.008)
 plt.colorbar()
 plt.show()
