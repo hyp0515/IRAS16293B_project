@@ -621,7 +621,8 @@ class radmc3d_setup:
                                  hourglass=False,
                                  uniform_x=False,
                                  uniform_y=False,
-                                 uniform_z=True,):
+                                 uniform_z=False,
+                                 toroidal=False):
         
         R_mesh, Theta_mesh, Phi_mesh = np.meshgrid(self.DM.r_sph*au, self.DM.theta_sph, self.DM.phi_sph, indexing='ij')
         
@@ -631,9 +632,22 @@ class radmc3d_setup:
 
         alvec = np.zeros((self.NR, self.NTheta, self.NPhi, 3))
 
-        Bx = 0
-        By = 0
-        Bz = 1
+        Bx = np.zeros_like(XX)
+        By = np.zeros_like(YY)
+        Bz = np.zeros_like(ZZ)
+
+        if uniform_x is True: Bx += 1
+        if uniform_y is True: By += 1
+        if uniform_z is True: Bz += 1
+
+        if hourglass is True:
+            Bx += alpha * XX * ZZ * np.exp(-alpha * ZZ**2)
+            By += alpha * YY * ZZ * np.exp(-alpha * ZZ**2)
+
+        if toroidal is True:
+            Bx += YY
+            By += -XX
+
 
         alvec[:, :, :, 0] = Bx / np.sqrt(Bx**2 + By**2 + Bz**2)
         alvec[:, :, :, 1] = By / np.sqrt(Bx**2 + By**2 + Bz**2)
@@ -656,8 +670,8 @@ class radmc3d_setup:
         lam = np.logspace(np.log10(5e-1), np.log10(5e4), nlam, endpoint=True)  # Wavelengths in microns
         ang = np.linspace(0, 90, nang, endpoint=True)  # Angles in degrees
 
-        k_orth = 1 + 0.1*(1-(np.cos(np.deg2rad(ang))**2))  # Orthogonal component of kappa
-        k_para = 1 - 0.1*(1-(np.cos(np.deg2rad(ang))**2))  # Parallel component of kappa
+        k_orth = 1 + 0.1*(1-np.cos(np.radians(ang))**2)  # Orthogonal component of kappa
+        k_para = 1 - 0.1*(1-np.cos(np.radians(ang))**2)  # Parallel component of kappa
 
         # k_orth = np.ones(nang)  # Orthogonal component of kappa
         # k_para = 1 - np.sin(np.deg2rad(ang))  # Parallel component of kappa

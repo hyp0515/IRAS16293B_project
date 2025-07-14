@@ -136,6 +136,7 @@ class generate_simulation:
                            npix     = 200,
                            sizeau   = 100,
                            posang   = 45,
+                           phi      = 0,
                            scat     = True,
                            stokes   = True, 
                            **kwargs):
@@ -164,7 +165,7 @@ class generate_simulation:
 
         type_note = 'conti'
 
-        prompt = f'radmc3d image npix {npix} sizeau {sizeau} incl {incl} lambda {wav} posang {-posang} noline'
+        prompt = f'radmc3d image npix {npix} sizeau {sizeau} incl {incl} lambda {wav} posang {-posang} phi {phi} noline'
         
         f = '_scat'
         
