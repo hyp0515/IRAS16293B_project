@@ -300,6 +300,39 @@ class radmc3d_setup:
         if filename != None:
             self.duplicate_file(default_filename, filename, comment = comment, timemark = self.now)
     
+    def write_dust_opac(self, 
+                        inputstyle=20, 
+                        grain_align=True):    
+        '''
+        Preparing the control file for dust opacity.
+        '''
+        self.dust_type = ['temp_1', 'temp_2', 'temp_3', 'temp_4']
+        self.dust_spec = len(self.dust_type)
+
+        if isinstance(inputstyle, str):
+            if inputstyle.lower() == 'dustkappa':
+                inputstyle = 10
+            elif inputstyle.lower() == 'dustkapscatmat':
+                if grain_align is True:
+                    inputstyle = 20
+                else:
+                    inputstyle = 10
+        self.inputstyle = inputstyle
+        '''
+        1 : dustkappa_*.inp file
+        10: dustkapscatmat_*.inp file without grain alignment (read Z matrix)
+        20: dustkapscatmat_*.inp file with grain alignment (required dustkapalignfact_*.inp)
+        '''
+        with open('dustopac.inp','w+') as f:
+            f.write('2                          Format number of this file\n')
+            f.write(f'{self.dust_spec}                          Nr of dust species\n')
+            f.write('============================================================================\n')
+            for i, dust in enumerate(self.dust_type):
+                f.write(f'{inputstyle}                          Way in which this dust species is read\n')
+                f.write('0                          0=Thermal grain\n')
+                f.write(f'{dust}                     Extension of name of dustkappa_***.inp file\n')
+                f.write('============================================================================\n')
+
     def get_diskcontrol(self, 
                         d_to_g_ratio = 0.01,
                                a_max = None,
@@ -356,8 +389,10 @@ class radmc3d_setup:
         self.dust_to_gas_ratio = d_to_g_ratio
         # note: the original a_max is in cm
         # a_min is set to be 0.05 um = 5e-6 cm
+        
         self.opacity_table  = generate_opacity_table_opt(a_min=1e-6, a_max=a_max*0.1,
-                                                    q=q, dust_to_gas=d_to_g_ratio)
+                                                    q=q, dust_to_gas=d_to_g_ratio,
+                                                    inputstyle=self.inputstyle)
         
         self.disk_property_table = generate_disk_property_table(self.opacity_table)
         if generate_table_only is True:
@@ -394,7 +429,6 @@ class radmc3d_setup:
         # f.close()
         
         self.write_amr_grid()
-        self.write_dust_opac()
         self.write_dust_density()
 
     def write_amr_grid(self):
@@ -418,38 +452,6 @@ class radmc3d_setup:
                 f.write('%13.13e\n'%(value))
             for value in self.DM.phi_sph_grid:
                 f.write('%13.13e\n'%(value))
-    
-    def write_dust_opac(self, 
-                        inputstyle=10, 
-                        grain_align=True):    
-        '''
-        Preparing the control file for dust opacity.
-        '''
-        self.dust_type = ['temp_1', 'temp_2', 'temp_3', 'temp_4']
-        self.dust_spec = len(self.dust_type)
-
-        if isinstance(inputstyle, str):
-            if inputstyle.lower() == 'dustkappa':
-                inputstyle = 10
-            elif inputstyle.lower() == 'dustkapscatmat':
-                if grain_align is True:
-                    inputstyle = 20
-                else:
-                    inputstyle = 10
-        '''
-        1 : dustkappa_*.inp file
-        10: dustkapscatmat_*.inp file without grain alignment (read Z matrix)
-        20: dustkapscatmat_*.inp file with grain alignment (required dustkapalignfact_*.inp)
-        '''
-        with open('dustopac.inp','w+') as f:
-            f.write('2                          Format number of this file\n')
-            f.write(f'{self.dust_spec}                          Nr of dust species\n')
-            f.write('============================================================================\n')
-            for i, dust in enumerate(self.dust_type):
-                f.write(f'{inputstyle}                          Way in which this dust species is read\n')
-                f.write('0                          0=Thermal grain\n')
-                f.write(f'{dust}                     Extension of name of dustkappa_***.inp file\n')
-                f.write('============================================================================\n')
     
     def write_dust_density(self):
         '''

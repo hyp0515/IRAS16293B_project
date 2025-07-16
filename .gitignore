@@ -2,3 +2,4 @@ syn_obs
 polarize_simulation/*.inp
 polarize_simulation/*.out
 polarize_simulation/*.dat
+polarize_simulation/simulation/*
