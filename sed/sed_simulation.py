@@ -12,12 +12,12 @@ from radmc.plot import generate_plot
 
 from plot_sed import HG_19_data, this_work_data
 
-amax        = .3 # maximum grain size in mm
+amax        = 0.07 # maximum grain size in mm
 mstar       = 0.5 # stellar mass in solar masses
 mdot        = 5e-5 # accretion rate in solar masses per year
 rd          = 50 # disk radius in AU
-Toomre_Q    = 0.3 # Toomre Q parameter
-l_star      = .1 # stellar luminosity in solar luminosities
+Toomre_Q    = 0.55 # Toomre Q parameter
+l_star      = 0.1 # stellar luminosity in solar luminosities
 heating     = 'accretion' # heating mechanism
 incl        = 50
 
@@ -29,7 +29,7 @@ obs_lambda = np.array([
 ])
 lam = np.linspace(0.2, 1000, 1000) # microns
 
-nphot_spec_values = [20000, 40000, 100000, 250000, 500000]
+nphot_spec_values = [100000]
 results = []
 
 freqs_this_work = np.array([d["Freq"] for d in this_work_data])
@@ -105,4 +105,5 @@ ax.set_xlabel('Frequency (GHz)')
 ax.set_ylabel('Flux Density (mJy)')
 ax.legend()
 ax.set_title('SED Comparison with Varying nphot_spec_values')
-plt.show()
+# plt.show()
+plt.savefig(f'amax={amax}, mstar={mstar}, mdot={mdot}, Toomre_Q={Toomre_Q}.pdf', transparent=True)
