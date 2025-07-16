@@ -16,6 +16,128 @@ class generate_simulation:
         if (self.save_out is False) and (self.save_npz is False):
             self.save_out = True
 
+    def generate_continuum(self,
+                           dir      = './test/', 
+                           fname    = 'test',
+                           incl     = 73,
+                           wav      = 1300,
+                           npix     = 200,
+                           sizeau   = 100,
+                           posang   = 45,
+                           phi      = 0,
+                           scat     = True,
+                           stokes   = True,
+                           load_simulation=False, 
+                           **kwargs):
+        """
+        This function will generate a continuum image.
+
+        Parameters
+        -----------------
+        dir                : str
+            Directory to save the output
+        fname              : str
+            File name to save the output
+        incl               : float
+            Inclination angle of the disk
+        wav                : float
+            Wavelength to simulate
+        npix               : int
+            Number of map's pixels
+        sizeau             : float
+            Map's span
+        posang             : float
+            Position angle of the disk
+        scat               : bool
+            If True, scattering is included. (Time-consuming)
+        """
+
+        type_note = 'conti'
+
+        prompt = f'radmc3d image npix {npix} sizeau {sizeau} incl {incl} lambda {wav} posang {-posang} phi {phi} noline'
+        
+        f = '_scat'
+        
+        if stokes is True:
+            prompt = prompt + ' stokes'
+            f = f + '_stokes'
+        if scat is False:
+            prompt = prompt + ' noscat'
+            f = '_noscat'
+        
+        if load_simulation is not True:
+            os.system(prompt)
+            self.conti = readImage('image.out')
+            if self.save_npz is True:
+                self.save_npzfile(self.conti, dir=dir, fname=fname, f=f, note=type_note)
+            
+            if self.save_out is True:
+                self.save_outfile(dir=dir, fname=fname, f=f, note=type_note)
+        else:
+            self.conti = readImage(f'{dir+'outfile/'+type_note+'_'+fname+f}.out')
+
+    def generate_sed(self,
+                     dir        = './test/',
+                     fname      = 'test',
+                     incl       = 73,
+                     freq_min   = 5e1,
+                     freq_max   = 1e3,
+                     nlam       = 100,
+                     scat       = True,
+                     read_lambda= None,
+                     load_simulation=False,
+                     **kwargs):
+        
+        """
+        This function will generate a spectral energy distribution (SED).
+
+        Parameters
+        -----------------
+        dir                : str
+            Directory to save the output
+        fname              : str
+            File name to save the output
+        incl               : float
+            Inclination angle of the disk
+        freq_min           : float
+            Minimum frequency to simulate
+        freq_max           : float
+            Maximum frequency to simulate
+        nlam               : int
+            Number of wavelengths
+        scat               : bool
+            If True, scattering is included. (Time-consuming)
+        """
+
+        type_note = 'sed'
+        if read_lambda is not None:
+            obs_lambda = read_lambda
+            with open('camera_wavelength_micron.inp', 'w+') as f:
+                f.write('%d\n'%(len(obs_lambda)))
+                for value in obs_lambda:
+                    f.write('%13.6e\n'%(value*1e3))
+            prompt = f'radmc3d spectrum incl {incl} loadlambda noline'
+        else:
+            wav_max  = ((cc*1e-2)/(freq_min*1e9))*1e+6
+            wav_min  = ((cc*1e-2)/(freq_max*1e9))*1e+6
+            prompt = f"radmc3d spectrum incl {incl} lambdarange {wav_min} {wav_max} nlam {nlam} noline"
+
+        f = '_scat'
+        if scat is False:
+            prompt = prompt + ' noscat'
+            f = '_noscat'
+
+        if load_simulation is not True:
+            os.system(prompt)
+            self.spectrum = readSpectrum('spectrum.out')
+            if self.save_npz is True:
+                self.save_npzfile(self.spectrum, dir=dir, fname=fname, f=f, note=type_note)
+            if self.save_out is True:
+                self.save_outfile(dir=dir, fname=fname, f=f, note=type_note)
+        else:
+            self.spectrum = readSpectrum(f'{dir+'outfile/'+type_note+'_'+fname+f}.out')
+
+    # generate_cube and gnerate_line_spectrum are not used in the current project, but they are defined for completeness.
     def generate_cube(self,
                       dir       = './test/',
                       fname     = 'test', 
@@ -127,116 +249,6 @@ class generate_simulation:
                 self.save_npzfile(self.cube_list, dir=dir, fname=fname, f='_extracted', note=type_note)
         else:
             pass
-            
-    def generate_continuum(self,
-                           dir      = './test/', 
-                           fname    = 'test',
-                           incl     = 73,
-                           wav      = 1300,
-                           npix     = 200,
-                           sizeau   = 100,
-                           posang   = 45,
-                           phi      = 0,
-                           scat     = True,
-                           stokes   = True, 
-                           **kwargs):
-        """
-        This function will generate a continuum image.
-
-        Parameters
-        -----------------
-        dir                : str
-            Directory to save the output
-        fname              : str
-            File name to save the output
-        incl               : float
-            Inclination angle of the disk
-        wav                : float
-            Wavelength to simulate
-        npix               : int
-            Number of map's pixels
-        sizeau             : float
-            Map's span
-        posang             : float
-            Position angle of the disk
-        scat               : bool
-            If True, scattering is included. (Time-consuming)
-        """
-
-        type_note = 'conti'
-
-        prompt = f'radmc3d image npix {npix} sizeau {sizeau} incl {incl} lambda {wav} posang {-posang} phi {phi} noline'
-        
-        f = '_scat'
-        
-        if stokes is True:
-            prompt = prompt + ' stokes'
-            f = f + '_stokes'
-        if scat is False:
-            prompt = prompt + ' noscat'
-            f = '_noscat'
-        
-        os.system(prompt)
-        
-        
-        self.conti = readImage('image.out')
-        if self.save_npz is True:
-            self.save_npzfile(self.conti, dir=dir, fname=fname, f=f, note=type_note)
-        
-        if self.save_out is True:
-            self.save_outfile(dir=dir, fname=fname, f=f, note=type_note)
- 
-    def generate_sed(self,
-                     dir        = './test/',
-                     fname      = 'test',
-                     incl       = 73,
-                     freq_min   = 5e1,
-                     freq_max   = 1e3,
-                     nlam       = 100,
-                     scat       = True,
-                     **kwargs):
-        
-        """
-        This function will generate a spectral energy distribution (SED).
-
-        Parameters
-        -----------------
-        dir                : str
-            Directory to save the output
-        fname              : str
-            File name to save the output
-        incl               : float
-            Inclination angle of the disk
-        freq_min           : float
-            Minimum frequency to simulate
-        freq_max           : float
-            Maximum frequency to simulate
-        nlam               : int
-            Number of wavelengths
-        scat               : bool
-            If True, scattering is included. (Time-consuming)
-        """
-
-        type_note = 'sed'
-        
-        wav_max  = ((cc*1e-2)/(freq_min*1e9))*1e+6
-        wav_min  = ((cc*1e-2)/(freq_max*1e9))*1e+6
-        
-        
-        prompt = f"radmc3d spectrum incl {incl} lambdarange {wav_min} {wav_max} nlam {nlam} noline"
-        f = '_scat'
-        if scat is False:
-            prompt = prompt + ' noscat'
-            f = '_noscat'
-
-        os.system(prompt)
-
-        if self.save_npz is True:
-            self.spectrum = readSpectrum('spectrum.out')
-            self.save_npzfile(self.spectrum, dir=dir, fname=fname, f=f, note=type_note)
-        
-        if self.save_out is True:
-            self.save_outfile(dir=dir, fname=fname, f=f, note=type_note)
 
     def generate_line_spectrum(self,
                                dir        = './test/',

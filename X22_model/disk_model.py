@@ -381,7 +381,7 @@ def compute_grain_properties_DSHARP(
 def generate_opacity_table_opt(
     a_min, a_max, q, dust_to_gas,
     T_min=20, T_max=2000, N_T=100,
-    save_table=True
+    save_table=True, inputstyle=20,
     ):
     """
     Generate an opacity table for given grain size distribution.
@@ -432,9 +432,18 @@ def generate_opacity_table_opt(
     kappa_r = []
     g       = []
     for idx in range(len(material)):
-        p = optool.particle(f'optool -c {' '.join(material[(idx):])} -a {a_min*1e4} {a_max*1e4} {-q} -l 0.5 50000 101 -mie -radmc -s',
-                            cache='./opacity_table/',
-                            silent=True)
+        if inputstyle == 10 or inputstyle == 20:
+            p = optool.particle(f'optool -c {' '.join(material[(idx):])} -a {a_min*1e4} {a_max*1e4} {-q} -l 0.5 50000 101 -mie -radmc -s',
+                                cache='./opacity_table/',
+                                silent=True)
+            if save_table:
+                os.system(f'cp -r ./opacity_table/dustkapscatmat.inp ./dustkapscatmat_{fname[idx]}.inp')
+        elif inputstyle == 1:
+            p = optool.particle(f'optool -c {' '.join(material[(idx):])} -a {a_min*1e4} {a_max*1e4} {-q} -l 0.5 50000 101 -mie -radmc',
+                                cache='./opacity_table/',
+                                silent=True)
+            if save_table:
+                os.system(f'cp -r ./opacity_table/dustkappa.inp ./dustkappa_{fname[idx]}.inp')
         kappa.append(  p.kabs[0,:]*dust_to_gas*np.sum(fraction[idx:]))
         kappa_s.append(p.ksca[0,:]*dust_to_gas*np.sum(fraction[idx:]) * (1-p.gsca[0,:]))
         with warnings.catch_warnings():                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
@@ -443,9 +452,7 @@ def generate_opacity_table_opt(
         kappa_p.append(p.kplanck[0,:]*dust_to_gas*np.sum(fraction[idx:]))
         kappa_r.append(p.kross[0,:]*dust_to_gas*np.sum(fraction[idx:]))
         g.append(p.gsca[0,:]*dust_to_gas*np.sum(fraction[idx:]))
-        if save_table:
-            # os.system(f'cp -r ./opacity_table/dustkappa.inp ./dustkappa_{fname[idx]}.inp')
-            os.system(f'cp -r ./opacity_table/dustkapscatmat.inp ./dustkapscatmat_{fname[idx]}.inp')
+
     os.system('rm -r ./opacity_table')
     # try:
     #     os.system('rm -r ./opacity_table')
