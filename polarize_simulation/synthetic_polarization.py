@@ -22,78 +22,78 @@ Q_fiducial    = 0.5
 
 
 obs_wav = [1300, 3000, 7000, 18000]
-# fig, ax = plt.subplots(1, 4, figsize=(16, 4), sharex=True, sharey=True)
-# for lam in obs_wav:
-#     for i, amax in enumerate(amax_list):
-#         for j, mdot in enumerate(Mdot_list):
-#             for k, Q in enumerate(Q_list):
-#                 amax        = amax # maximum grain size in mm
-#                 mstar       = 0.3 # stellar mass in solar masses
-#                 mdot        = mdot # accretion rate in solar masses per year
-#                 rd          = 50 # disk radius in AU
-#                 Toomre_Q    = Q # Toomre Q parameter
-#                 l_star      = .1 # stellar luminosity in solar luminosities
-#                 heating     = 'accretion' # heating mechanism
+fig, ax = plt.subplots(1, 4, figsize=(16, 4), sharex=True, sharey=True)
+for lam in obs_wav:
+    for i, amax in enumerate(amax_list):
+        for j, mdot in enumerate(Mdot_list):
+            for k, Q in enumerate(Q_list):
+                amax        = amax # maximum grain size in mm
+                mstar       = 0.5 # stellar mass in solar masses
+                mdot        = mdot # accretion rate in solar masses per year
+                rd          = 50 # disk radius in AU
+                Toomre_Q    = Q # Toomre Q parameter
+                l_star      = .1 # stellar luminosity in solar luminosities
+                heating     = 'accretion' # heating mechanism
 
 
-                # model = radmc3d_setup(silent=False)
-                # model.get_mastercontrol(filename=None,
-                #                         comment=None,
-                #                         incl_dust=1,
-                #                         incl_lines=0,
-                #                         nphot=500000,
-                #                         nphot_scat=10000000,
-                #                         scattering_mode_max=5,
-                #                         istar_sphere=1,
-                #                         num_cpu=None,
-                #                         modified_random_walk = 1,
-                #                         alignment_mode=1, # 1 for grain alignment
-                #                         )
-                # model.get_continuumlambda(filename=None,
-                #                         comment=None,
-                #                         lambda_micron=None,
-                #                         append=False)
-                # model.get_diskcontrol(  d_to_g_ratio    = 0.01,
-                #                         a_max           = amax, # mm
-                #                         Mass_of_star    = mstar, # Msun
-                #                         Accretion_rate  = mdot, # Msun/yr
-                #                         Radius_of_disk  = rd,   # AU
-                #                         Q               = Toomre_Q, # Toomre Q
-                #                         NR    =200,
-                #                         NTheta=200,
-                #                         NPhi  =100,
-                #                         )
-                # model.get_heatcontrol(L_star=l_star, # Lsun
-                #                     R_star=1,
-                #                     heat=heating) # radiation/accretion
+                model = radmc3d_setup(silent=False)
+                model.get_mastercontrol(filename=None,
+                                        comment=None,
+                                        incl_dust=1,
+                                        incl_lines=0,
+                                        nphot=500000,
+                                        nphot_scat=10000000,
+                                        scattering_mode_max=5,
+                                        istar_sphere=1,
+                                        num_cpu=None,
+                                        modified_random_walk = 1,
+                                        alignment_mode=-1, # 1 for grain alignment
+                                        )
+                model.get_continuumlambda(filename=None,
+                                        comment=None,
+                                        lambda_micron=None,
+                                        append=False)
+                model.get_diskcontrol(  d_to_g_ratio    = 0.01,
+                                        a_max           = amax, # mm
+                                        Mass_of_star    = mstar, # Msun
+                                        Accretion_rate  = mdot, # Msun/yr
+                                        Radius_of_disk  = rd,   # AU
+                                        Q               = Toomre_Q, # Toomre Q
+                                        NR    =200,
+                                        NTheta=200,
+                                        NPhi  =100,
+                                        )
+                model.get_heatcontrol(L_star=l_star, # Lsun
+                                    R_star=1,
+                                    heat=heating) # radiation/accretion
 
-                # model.write_dust_opac(inputstyle=20, grain_align=True)
-                # model.get_dustalignmentcontrol(alpha=1/(20*au*au), 
-                #                             hourglass=True, 
-                #                             uniform_z=True, 
-                #                             uniform_x=False, 
-                #                             uniform_y=False,
-                #                             toroidal=False)
+                model.write_dust_opac(inputstyle=20, grain_align=True)
+                model.get_dustalignmentcontrol(alpha=1/(20*au*au), 
+                                            hourglass=True, 
+                                            uniform_z=True, 
+                                            uniform_x=False, 
+                                            uniform_y=False,
+                                            toroidal=False)
 
-                # simulation = generate_simulation(save_out=True, save_npz=True)
+                simulation = generate_simulation(save_out=True, save_npz=True)
 
-                # simulate_mutual_parms = {
-                #     "incl"      : 50,
-                #     "npix"      : 500,
-                #     "sizeau"    : 200,
-                #     "posang"    : 0,
-                #     "phi"       : 0,
-                #     "dir"       : f'./simulation/{lam}/',
-                #     "fname"     : f'amax_{amax}_Mdot_{mdot}_Q_{Toomre_Q}',
-                # }
+                simulate_mutual_parms = {
+                    "incl"      : 50,
+                    "npix"      : 500,
+                    "sizeau"    : 200,
+                    "posang"    : 0,
+                    "phi"       : 0,
+                    "dir"       : f'./simulation/{lam}/',
+                    "fname"     : f'amax_{amax}_Mdot_{mdot}_Q_{Toomre_Q}',
+                }
 
-                # simulation.generate_continuum(
-                #     scat=True,
-                #     wav=lam,
-                #     stokes=True,
-                #     load_simulation=True,
-                #     **simulate_mutual_parms
-                # )
+                simulation.generate_continuum(
+                    scat=True,
+                    wav=lam,
+                    stokes=True,
+                    load_simulation=False,
+                    **simulate_mutual_parms
+                )
                 
                 # sizeau = simulate_mutual_parms['sizeau']
                 # npix = simulate_mutual_parms['npix']
@@ -129,95 +129,93 @@ obs_wav = [1300, 3000, 7000, 18000]
                 # ax[i].quiver(x_ds, y_ds, u, v, color='white', scale=50, headlength=0, headaxislength=0, headwidth=0)
                 # ax[i].set_title(f'$a_{{max}} = {amax:.0e}$ mm')
 
-# plt.savefig('effect_amax.pdf', transparent=True)
+
+
+# amax        = 0.1 # maximum grain size in mm
+# mstar       = 0.3 # stellar mass in solar masses
+# mdot        = 1e-6 # accretion rate in solar masses per year
+# rd          = 50 # disk radius in AU
+# Toomre_Q    = 0.5 # Toomre Q parameter
+# l_star      = .1 # stellar luminosity in solar luminosities
+# heating     = 'accretion' # heating mechanism
+
+
+# model = radmc3d_setup(silent=False)
+# model.get_mastercontrol(filename=None,
+#                         comment=None,
+#                         incl_dust=1,
+#                         incl_lines=0,
+#                         nphot=500000,
+#                         nphot_scat=10000000,
+#                         nphot_spec=100000,
+#                         scattering_mode_max=5,
+#                         istar_sphere=1,
+#                         num_cpu=None,
+#                         modified_random_walk = 1,
+#                         alignment_mode=-1,
+#                         )
+# model.get_continuumlambda(filename=None,
+#                         comment=None,
+#                         lambda_micron=None,
+#                         append=False)
+# model.write_dust_opac(inputstyle=20, grain_align=True)
+# model.get_diskcontrol(  d_to_g_ratio    = 0.01,
+#                         a_max           = amax, # mm
+#                         Mass_of_star    = mstar, # Msun
+#                         Accretion_rate  = mdot, # Msun/yr
+#                         Radius_of_disk  = rd,   # AU
+#                         Q               = Toomre_Q, # Toomre Q
+#                         NR    =200,
+#                         NTheta=200,
+#                         NPhi  =100,
+#                         )
+# model.get_heatcontrol(L_star=l_star, # Lsun
+#                     R_star=1,
+#                     heat=heating) # radiation/accretion
+# model.get_dustalignmentcontrol(alpha=1/(20*au*au), 
+#                             hourglass=True, 
+#                             uniform_z=True, 
+#                             uniform_x=False, 
+#                             uniform_y=False,
+#                             toroidal=False)
+
+# simulation = generate_simulation(save_out=True, save_npz=True)
+
+# simulate_mutual_parms = {
+#     "incl"      : 50,
+#     "npix"      : 500,
+#     "sizeau"    : 200,
+#     "posang"    : 0,
+#     "phi"       : 0,
+#     "dir"       : f'./test/{1300}/',
+#     "fname"     : f'amax_{amax}_Mdot_{mdot}_Q_{Toomre_Q}',
+# }
+
+# simulation.generate_continuum(
+#     scat=True,
+#     wav=1300,
+#     stokes=True,
+#     load_simulation=False,
+#     **simulate_mutual_parms
+# )
+
+# plt.imshow(simulation.conti.imageJyppix[:, :, 0, 0].T, origin='lower', cmap="magma")
+# plt.show()
 # plt.close()
 
+# simulation.generate_sed(
+#     scat=True,
+#     read_lambda=[
+#         1.3, 3, 7, 18
+#     ],
+#     load_simulation=False,
+#     **simulate_mutual_parms
+# )
 
-amax        = 0.1 # maximum grain size in mm
-mstar       = 0.3 # stellar mass in solar masses
-mdot        = 1e-6 # accretion rate in solar masses per year
-rd          = 50 # disk radius in AU
-Toomre_Q    = 0.5 # Toomre Q parameter
-l_star      = .1 # stellar luminosity in solar luminosities
-heating     = 'accretion' # heating mechanism
-
-
-model = radmc3d_setup(silent=False)
-model.get_mastercontrol(filename=None,
-                        comment=None,
-                        incl_dust=1,
-                        incl_lines=0,
-                        nphot=500000,
-                        nphot_scat=10000000,
-                        nphot_spec=100000,
-                        scattering_mode_max=5,
-                        istar_sphere=1,
-                        num_cpu=None,
-                        modified_random_walk = 1,
-                        alignment_mode=-1,
-                        )
-model.get_continuumlambda(filename=None,
-                        comment=None,
-                        lambda_micron=None,
-                        append=False)
-model.write_dust_opac(inputstyle=20, grain_align=True)
-model.get_diskcontrol(  d_to_g_ratio    = 0.01,
-                        a_max           = amax, # mm
-                        Mass_of_star    = mstar, # Msun
-                        Accretion_rate  = mdot, # Msun/yr
-                        Radius_of_disk  = rd,   # AU
-                        Q               = Toomre_Q, # Toomre Q
-                        NR    =200,
-                        NTheta=200,
-                        NPhi  =100,
-                        )
-model.get_heatcontrol(L_star=l_star, # Lsun
-                    R_star=1,
-                    heat=heating) # radiation/accretion
-model.get_dustalignmentcontrol(alpha=1/(20*au*au), 
-                            hourglass=True, 
-                            uniform_z=True, 
-                            uniform_x=False, 
-                            uniform_y=False,
-                            toroidal=False)
-
-simulation = generate_simulation(save_out=True, save_npz=True)
-
-simulate_mutual_parms = {
-    "incl"      : 50,
-    "npix"      : 500,
-    "sizeau"    : 200,
-    "posang"    : 0,
-    "phi"       : 0,
-    "dir"       : f'./test/{1300}/',
-    "fname"     : f'amax_{amax}_Mdot_{mdot}_Q_{Toomre_Q}',
-}
-
-simulation.generate_continuum(
-    scat=True,
-    wav=1300,
-    stokes=True,
-    load_simulation=False,
-    **simulate_mutual_parms
-)
-
-plt.imshow(simulation.conti.imageJyppix[:, :, 0, 0].T, origin='lower', cmap="magma")
-plt.show()
-plt.close()
-
-simulation.generate_sed(
-    scat=True,
-    read_lambda=[
-        1.3, 3, 7, 18
-    ],
-    load_simulation=False,
-    **simulate_mutual_parms
-)
-
-sed = simulation.spectrum
-lam = sed[:, 0]
-nu = (1e-2*cc)*1e-9/(1e-6*lam) # GHz
-fnu = sed[:, 1]*1e26/(140**2) # mJy
-plt.plot(nu, fnu, label=f'$a_{{max}} = {amax:.0e}$ mm')
-plt.show()
-plt.close()
+# sed = simulation.spectrum
+# lam = sed[:, 0]
+# nu = (1e-2*cc)*1e-9/(1e-6*lam) # GHz
+# fnu = sed[:, 1]*1e26/(140**2) # mJy
+# plt.plot(nu, fnu, label=f'$a_{{max}} = {amax:.0e}$ mm')
+# plt.show()
+# plt.close()
