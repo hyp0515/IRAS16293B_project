@@ -12,6 +12,7 @@ cleanall:
 	   dustkapscatmat_*.inp                                     \
 	   dustkapalignfact_*.inp                                   \
 	   grainalign_dir*.inp                                      \
+	   camera_wavelength_micro.inp                              \
 	   gas_velocity.inp lines.inp                               \
 	   numberdens_ch3oh.inp numberdens_co.inp                   \
 	   gas_temperature.inp                                      \
