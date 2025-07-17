@@ -27,7 +27,7 @@ def write_log(fname='log.txt'):
 
 distance = 140
 
-amax_list = [ 1e1, 1e-1, 1e-2, 1e-3] # maximum grain sizes in mm
+amax_list = [ 1e1,  1e0, 1e-1, 1e-2] # maximum grain sizes in mm
 Mdot_list = [1e-5, 1e-6, 1e-7, 1e-8] # accretion rates
 Q_list    = [ 1.5,    1,  0.5,  0.3] # Toomre Q parameters
 
@@ -38,7 +38,6 @@ Q_fiducial    = 0.5
 
 
 obs_wav = np.array([1300, 3000, 7000, 18000])
-fig, ax = plt.subplots(1, 4, figsize=(16, 4), sharex=True, sharey=True)
 
 for i, amax in enumerate(amax_list):
     for j, mdot in enumerate(Mdot_list):
