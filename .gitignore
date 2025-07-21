@@ -4,4 +4,5 @@ polarize_simulation/*.out
 polarize_simulation/*.dat
 polarize_simulation/simulation/*/npzfile/
 polarize_simulation/simulation/*/outfile/
-sed/simulation/*
+sed/simulation/*/npzfile/
+sed/simulation/*/outfile/
