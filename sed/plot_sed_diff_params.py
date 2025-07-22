@@ -36,9 +36,9 @@ sigma_this_work = np.array([d["sigma"] for d in this_work_data])
 
 distance = 140
 
-amax_list = [ 1e1,  1e0, 1e-1, 1e-2] # maximum grain sizes in mm
+amax_list = [ 1e1,  1e0, 7e-1, 5e-1, 3e-1, 1e-1, 1e-2] # maximum grain sizes in mm
 Mdot_list = [1e-5, 1e-6, 1e-7, 1e-8] # accretion rates
-Q_list    = [ 1.5,    1,  0.5,  0.3] # Toomre Q parameters
+Q_list    = [ 1.5,    1,  0.5,  0.75, 0.3] # Toomre Q parameters
 
 
 amax_fiducial = 1e-1
@@ -54,7 +54,7 @@ for i, amax in enumerate(amax_list):
             amax        = amax # maximum grain size in mm
             mstar       = 0.5 # stellar mass in solar masses
             mdot        = mdot # accretion rate in solar masses per year
-            rd          = 50 # disk radius in AU
+            rd          = 40 # disk radius in AU
             Toomre_Q    = Q # Toomre Q parameter
             l_star      = .1 # stellar luminosity in solar luminosities
             heating     = 'accretion' # heating mechanism
@@ -131,7 +131,6 @@ for i, amax in enumerate(amax_list):
             nu = (1e-2*cc)*1e-9/(1e-6*lam) # GHz
             fnu = sed[:, 1]*1e26/(140**2) # mJy
 
-            
             # plt.figure(figsize=(6, 10))
 
             fig, ax = plt.subplots(1, 2, figsize=(12, 10), sharey=True)

@@ -27,6 +27,7 @@ class generate_simulation:
                            phi      = 0,
                            scat     = True,
                            stokes   = True,
+                           read_lambda=None,
                            load_simulation=False, 
                            **kwargs):
         """
@@ -53,8 +54,16 @@ class generate_simulation:
         """
 
         type_note = 'conti'
-
-        prompt = f'radmc3d image npix {npix} sizeau {sizeau} incl {incl} lambda {wav} posang {-posang} phi {phi} noline'
+        
+        if read_lambda is not None:
+            obs_lambda = read_lambda
+            with open('camera_wavelength_micron.inp', 'w+') as f:
+                f.write('%d\n'%(len(obs_lambda)))
+                for value in obs_lambda:
+                    f.write('%13.6e\n'%(value*1e3))
+            prompt = f'radmc3d image npix {npix} sizeau {sizeau} incl {incl} posang {-posang} phi {phi} loadlambda noline'
+        else:
+            prompt = f'radmc3d image npix {npix} sizeau {sizeau} incl {incl} posang {-posang} phi {phi} lambda {wav} noline'
         
         f = '_scat'
         
