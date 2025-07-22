@@ -96,7 +96,7 @@ def radial_intensity(image_array, center, width):
     return radial_profile_major, radial_profile_minor, center
 
 def get_flux_density(image_array, rms, beam):
-    beam_area_pixels = np.pi * beam[0] * beam[0] / (4 * np.log(2))
+    beam_area_pixels = beam
     image_copy = image_array.copy()
     mask = image_array > 5 * rms
     image_copy[~mask] = np.nan
@@ -171,15 +171,13 @@ fname_kuband_stokeI = '~/project_data/IRAS16293/image_FITS/JVLA_Kuband_Pol/rob0/
 crop_sizeau = 200
 
 # # Reference coords (Ku Band)
-# ra_ref = '16:32:22.6126'
-# dec_ref = '-24:28:32.678'
-# data, header, wcs = get_info(fname_kuband_stokeI)
-# date_obs = header['DATE-OBS']
-# t = Time(date_obs, format='isot', scale='utc')
+ra_ref = '16:32:22.6090'
+dec_ref = '-24:28:32.675'
+data, header, wcs = get_info(fname_kuband_stokeI)
 # Reference coords (Q Band)
-ra_ref = '16:32:22.6150'
-dec_ref = '-24:28:32.547'
-data, header, wcs = get_info(fname_qband_stokeI)
+# ra_ref = '16:32:22.6145'
+# dec_ref = '-24:28:32.555'
+# data, header, wcs = get_info(fname_qband_stokeI)
 date_obs = header['DATE-OBS']
 t = Time(date_obs, format='isot', scale='utc')
 
@@ -264,6 +262,7 @@ def plot_conti_column(ax, obs, model, lam, sizeau):
     ax[3].plot(np.linspace(-100, 100, num=radial_obs_minor.size, endpoint=True), radial_obs_minor, color='dodgerblue', linestyle='--')
     ax[3].plot(np.linspace(-100, 100, num=radial_model_major.size, endpoint=True), radial_model_major, color='violet')
     ax[3].plot(np.linspace(-100, 100, num=radial_model_minor.size, endpoint=True), radial_model_minor, color='dodgerblue')
+    ax[3].vlines(0, ymin=0, ymax=max(np.nanmax(radial_obs_major), np.nanmax(radial_model_major)), color='k', linestyle='--', linewidth=1)
     ax[3].text(0.05, 0.95, f'{lam*1e-3:.1f} mm', transform=ax[3].transAxes, fontsize=12, color='k', va='top')
     # ax[3].set_title(f'Radial profile at {lam} $\mu$m')
     ax[3].set_xlabel('AU')
@@ -272,18 +271,17 @@ def plot_conti_column(ax, obs, model, lam, sizeau):
     ax[3].set_ylim(bottom=0)
 
 def plot_conti_diff_params(simulation, obs, dir, fname):
-
     model_img = simulation.conti
-    conv_image = model_img.imConv(dpc=distance, fwhm=beam_info[i, :-1], pa=-(beam_info[i, -1]+90)) # Convolve with beam
-    sizeau = model_img.x/au
-    npix = len(model_img.x)
-    pixel_area = (sizeau/npix/140)**2
-    beam_area = beam_info[i, 0]*beam_info[i, 0]*np.pi/(4*np.log(2))
-    conv_image.imageJyppix *= beam_area/pixel_area/(distance**2) # Convert to Jy/pixel
 
     fig, axes = plt.subplots(4, len(obs_wav), figsize=(4*len(obs_wav), 4*len(obs_wav)))
-
     for i, lam in enumerate(obs_wav):
+        
+        conv_image = model_img.imConv(dpc=distance, fwhm=beam_info[i, :-1], pa=-(beam_info[i, -1]+90)) # Convolve with beam
+        sizeau = np.ceil(model_img.x[-1]/au * 2)
+        npix = len(model_img.x)
+        pixel_area = (sizeau/npix/140)**2
+        beam_area = beam_info[i, 0]*beam_info[i, 0]*np.pi/(4*np.log(2))
+        conv_image.imageJyppix *= beam_area/pixel_area/(distance**2) # Convert to Jy/pixel
         model = conv_image.imageJyppix[:, :, 0, i].T
         obs = obs_data[i]
 
@@ -332,6 +330,7 @@ def plot_conti_diff_params(simulation, obs, dir, fname):
         ax[3].plot(np.linspace(-100, 100, num=radial_obs_minor.size, endpoint=True), radial_obs_minor, color='dodgerblue', linestyle='--')
         ax[3].plot(np.linspace(-100, 100, num=radial_model_major.size, endpoint=True), radial_model_major, color='violet')
         ax[3].plot(np.linspace(-100, 100, num=radial_model_minor.size, endpoint=True), radial_model_minor, color='dodgerblue')
+        ax[3].vlines(0, ymin=0, ymax=max(np.nanmax(radial_obs_major), np.nanmax(radial_model_major)), color='k', linestyle='--', linewidth=1)
         ax[3].text(0.05, 0.95, f'{lam*1e-3:.1f} mm', transform=ax[3].transAxes, fontsize=12, color='k', va='top')
         # ax[3].set_title(f'Radial profile at {lam} $\mu$m')
         ax[3].set_xlabel('AU')
@@ -412,7 +411,7 @@ for i, amax in enumerate(amax_list):
             l_star      = .1 # stellar luminosity in solar luminosities
             heating     = 'accretion' # heating mechanism
 
-            setup_model(amax, mdot, rd, Toomre_Q)
+            # setup_model(amax, mdot, rd, Toomre_Q)
             # write_log()
             
             simulation = generate_simulation(save_out=True, save_npz=True)
@@ -424,16 +423,15 @@ for i, amax in enumerate(amax_list):
                 "phi"       : 0,
                 "dir"       : f'./simulation/amax_{amax}_Mdot_{mdot}_Q_{Toomre_Q}/',
             }
-            simulation.generate_sed(
-                scat=True,
-                read_lambda=obs_wav*1e-3,
-                load_simulation=True,
-                fname='sed',
-                **simulate_mutual_parms
-            )
+            # simulation.generate_sed(
+            #     scat=True,
+            #     read_lambda=obs_wav*1e-3,
+            #     load_simulation=True,
+            #     fname='sed',
+            #     **simulate_mutual_parms
+            # )
             simulation.generate_continuum(
                 scat=True,
-                wav=lam,
                 stokes=True,
                 read_lambda=obs_wav*1e-3,
                 load_simulation=True,
@@ -441,34 +439,45 @@ for i, amax in enumerate(amax_list):
                 **simulate_mutual_parms
             )
 
-            plot_sed_diff_params(simulation, dir=simulate_mutual_parms["dir"], fname='sed')
+            # plot_sed_diff_params(simulation, dir=simulate_mutual_parms["dir"], fname='sed')
             plot_conti_diff_params(simulation, obs_data, dir=simulate_mutual_parms["dir"], fname='conti')
 
-            fig, ax = plt.subplots(4, len(obs_wav), figsize=(4*len(obs_wav), 4*len(obs_wav)))
-
-            for i, lam in enumerate(obs_wav):
-                simulation.generate_continuum(
-                    scat=True,
-                    wav=lam,
-                    stokes=True,
-                    load_simulation=True,
-                    fname=f'wav_{lam}',
-                    **simulate_mutual_parms
-                )
+            # fig, ax = plt.subplots(4, len(obs_wav), figsize=(4*len(obs_wav), 4*len(obs_wav)))
+            # fig_pol, ax_pol = plt.subplots(4, len(obs_wav), figsize=(4*len(obs_wav), 4*len(obs_wav)))
+            # measured_fluxes = []
+            # for i, lam in enumerate(obs_wav):
+            #     simulation.generate_continuum(
+            #         scat=True,
+            #         wav=lam,
+            #         stokes=True,
+            #         load_simulation=True,
+            #         fname=f'wav_{lam}',
+            #         **simulate_mutual_parms
+            #     )
                 
-                model_img = simulation.conti
-                conv_image = model_img.imConv(dpc=distance, fwhm=beam_info[i, :-1], pa=-(beam_info[i, -1]+90)) # Convolve with beam
-                sizeau = model_img.x/au
-                npix = len(model_img.x)
-                pixel_area = (sizeau/npix/140)**2
-                beam_area = beam_info[i, 0]*beam_info[i, 0]*np.pi/(4*np.log(2))
-                conv_image.imageJyppix *= beam_area/pixel_area/(distance**2) # Convert to Jy/pixel
-
-                plot_conti_column(ax[:, i], obs_data[i], conv_image.imageJyppix[:, :, 0, 0].T, lam, sizeau)
-            plt.tight_layout()
-            plt.savefig(f'{simulate_mutual_parms["dir"]}conti.pdf', transparent=True)
-            plt.close()
-
+            #     model_img = simulation.conti
+            #     conv_image = model_img.imConv(dpc=distance, fwhm=beam_info[i, :-1], pa=-(beam_info[i, -1]+90)) # Convolve with beam
+            #     sizeau = model_img.x[-1]/au
+            #     npix = len(model_img.x)
+            #     pixel_area = (sizeau/npix/140)**2
+            #     beam_area = beam_info[i, 0]*beam_info[i, 0]*np.pi/(4*np.log(2))
+            #     conv_image.imageJyppix *= beam_area/pixel_area/(distance**2) # Convert to Jy/beam
+            #     flux_density, uncertainty = get_flux_density(conv_image.imageJyppix[:, :, 0, 0].T, obs_rms[i], beam_area/pixel_area)
+            #     nu = (1e-2*cc)*1e-9/(1e-6*lam) # GHz
+            #     plt.scatter(nu, flux_density*1e3, marker='x', color='red', label=f'radmc3d image {lam*1e-3:.1f} mm', s=100) # mJy
+            # radmc_spec = simulation.spectrum
+            # nu = (1e-2*cc)*1e-9/(1e-6*radmc_spec[:, 0]) # GHz
+            # fnu = radmc_spec[:, 1]*1e26/(140**2) # mJy
+            # plt.plot(nu, fnu, label='radmc3d spectrum', color='violet')
+            # plt.xscale('log'); plt.xlim((1e+1, 5e2))
+            # plt.yscale('log'); plt.ylim((1e-2, 2e5))
+            # plt.xlabel('Frequency (GHz)', fontsize=14)
+            # plt.ylabel('Flux Density (mJy)', fontsize=14)
+            # plt.title('Compare spectrum and image commands', fontsize=16)
+            # plt.grid(True, which='major', linestyle='--', linewidth=0.5)
+            # plt.legend(loc='upper left')
+            # plt.savefig(f'{simulate_mutual_parms["dir"]}compare_sed.pdf', transparent=True)
+            # plt.close()
 
             
              
