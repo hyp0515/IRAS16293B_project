@@ -6,3 +6,4 @@ polarize_simulation/simulation/*/npzfile/
 polarize_simulation/simulation/*/outfile/
 sed/simulation/*/npzfile/
 sed/simulation/*/outfile/
+.vscode/settings.json

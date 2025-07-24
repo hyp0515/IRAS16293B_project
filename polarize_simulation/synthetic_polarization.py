@@ -22,26 +22,44 @@ from sed.plot_sed import HG_19_data, this_work_data
 """
 Define functions to analyze the synthetic and observed polarization data.
 """
-def setup_model(amax, mdot, rd, Toomre_Q):
+def setup_model(amax, mdot, rd, Toomre_Q, align=True):
     model = radmc3d_setup(silent=False)
-    model.get_mastercontrol(filename=None,
-                            comment=None,
-                            incl_dust=1,
-                            incl_lines=0,
-                            nphot=500000,
-                            nphot_scat=5000000,
-                            nphot_spec=500000,
-                            scattering_mode_max=5,
-                            istar_sphere=1,
-                            num_cpu=None,
-                            modified_random_walk = 1,
-                            alignment_mode=-1, # 1 for grain alignment
-                            )
+    if align is False:
+        model.get_mastercontrol(filename=None,
+                                comment=None,
+                                incl_dust=1,
+                                incl_lines=0,
+                                nphot=500000,
+                                nphot_scat=5000000,
+                                nphot_spec=500000,
+                                scattering_mode_max=5,
+                                istar_sphere=1,
+                                num_cpu=None,
+                                modified_random_walk = 1,
+                                # alignment_mode=-1, # 1 for grain alignment
+                                )
+    else:
+        model.get_mastercontrol(filename=None,
+                                comment=None,
+                                incl_dust=1,
+                                incl_lines=0,
+                                nphot=500000,
+                                nphot_scat=5000000,
+                                nphot_spec=500000,
+                                scattering_mode_max=5,
+                                istar_sphere=1,
+                                num_cpu=None,
+                                modified_random_walk = 1,
+                                alignment_mode=-1,
+                                )
     model.get_continuumlambda(filename=None,
                             comment=None,
                             lambda_micron=None,
                             append=False)
-    model.write_dust_opac(inputstyle=20, grain_align=True)
+    if align is False:
+        model.write_dust_opac(inputstyle=10, grain_align=False)
+    else:
+        model.write_dust_opac(inputstyle=20, grain_align=True)
     model.get_diskcontrol(  d_to_g_ratio    = 0.01,
                             a_max           = amax, # mm
                             Mass_of_star    = mstar, # Msun
@@ -56,7 +74,7 @@ def setup_model(amax, mdot, rd, Toomre_Q):
                         R_star=1,
                         heat=heating) # radiation/accretion
 
-    model.get_dustalignmentcontrol(alpha=1/(20*au*au), 
+    model.get_dustalignmentcontrol(alpha=1/(10*au*au), 
                                 hourglass=True, 
                                 uniform_z=True, 
                                 uniform_x=False, 
@@ -75,34 +93,6 @@ def write_log(fname='log.txt'):
         f.write('=========================================\n')
         f.seek(0,2)
         f.write(f'{amax:.2e}  {mstar:.2f}  {mdot:.2e}  {rd}  {Toomre_Q:.1f}  {total_mass/ms*101:.4f}\n')
-
-def rotate_image(image, posang):
-    rotated_image = np.zeros_like(image)
-    rotated_image = ndimage.rotate(image, posang, reshape=False, axes=(1, 0))
-    rotated_image = np.nan_to_num(rotated_image, nan=0)
-    return rotated_image
-
-def radial_intensity(image_array, center, width):
-    if center is None:
-        # peak_idx_x, peak_idx_y = np.unravel_index(np.argmax(image_array, axis=None), image_array.shape)
-        # center = peak_idx_y
-        center = image_array.shape[1] // 2
-    if width != 1:
-        radial_profile_major = np.mean(image_array[center-width//2:center+width//2, :], axis=0)
-        radial_profile_minor = np.mean(image_array[:, center-width//2:center+width//2], axis=1)
-    else:
-        radial_profile_major = image_array[center, :]
-        radial_profile_minor = image_array[:, center]
-    return radial_profile_major, radial_profile_minor, center
-
-def get_flux_density(image_array, rms, beam):
-    beam_area_pixels = beam
-    image_copy = image_array.copy()
-    mask = image_array > 5 * rms
-    image_copy[~mask] = np.nan
-    total_flux = np.nansum(image_copy) / beam_area_pixels
-    uncertainty = rms * mask.sum() / beam_area_pixels
-    return total_flux, uncertainty
 
 def get_info(fname):
     with warnings.catch_warnings():
@@ -143,8 +133,37 @@ def crop_around_coord(data, wcs, center_coord, sizeau, au_per_pix):
     cropped_wcs = wcs.slice((slice(y_min, y_max), slice(x_min, x_max)))
     return cropped_data, cropped_wcs
 
+def rotate_image(image, posang):
+    rotated_image = np.zeros_like(image)
+    rotated_image = ndimage.rotate(image, posang, reshape=False, axes=(1, 0))
+    rotated_image = np.nan_to_num(rotated_image, nan=0)
+    return rotated_image
+
+def radial_intensity(image_array, center, width):
+    if center is None:
+        # peak_idx_x, peak_idx_y = np.unravel_index(np.argmax(image_array, axis=None), image_array.shape)
+        # center = peak_idx_y
+        center = image_array.shape[1] // 2
+    if width != 1:
+        radial_profile_major = np.mean(image_array[center-width//2:center+width//2, :], axis=0)
+        radial_profile_minor = np.mean(image_array[:, center-width//2:center+width//2], axis=1)
+    else:
+        radial_profile_major = image_array[center, :]
+        radial_profile_minor = image_array[:, center]
+    return radial_profile_major, radial_profile_minor, center
+
+def get_flux_density(image_array, rms, beam):
+    beam_area_pixels = beam
+    image_copy = image_array.copy()
+    mask = image_array > 5 * rms
+    image_copy[~mask] = np.nan
+    total_flux = np.nansum(image_copy) / beam_area_pixels
+    uncertainty = rms * mask.sum() / beam_area_pixels
+    return total_flux, uncertainty
+
+
 """
-Initialize observation (continuum)
+Initialize observation (continuum and polarization)
 """
 distance = 140
 
@@ -160,13 +179,22 @@ obs_rms = np.array([
     47e-6, # 7000 micron
     47e-6, # 18000 micron
 ])
-beam_info = np.zeros((len(obs_wav), 3)) # beam major, beam minor, beam position angle
+beam_info     = np.zeros((len(obs_wav), 3)) # beam major, beam minor, beam position angle
+beam_plr_info = np.zeros((len(obs_wav), 3)) # beam major, beam minor, beam position angle
 
 fname_band6_stokeI  = '~/project_data/IRAS16293/image_FITS/ALMA_Band6_Pol/c2d_1008_Stokes.I.regrid.fits'
 fname_band6_stokeI_highres = '~/project_data/IRAS16293/image_FITS/ALMA_Band6_Pol/iras16293B_cont_b6_foralpha_pbcor.fits'
 fname_band3_stokeI  = '~/project_data/IRAS16293/image_FITS/ALMA_Band3_StokesI/sourceB.image.dropdreg.fits'
 fname_qband_stokeI  = '~/project_data/IRAS16293/image_FITS/JVLA_Qband_Pol/iras16293_Qband.rob0.I.regrid.fits'
 fname_kuband_stokeI = '~/project_data/IRAS16293/image_FITS/JVLA_Kuband_Pol/rob0/I16293_Kuband_A.rob0.I.image.tt0.pbcor.subim.fits'
+
+fname_band6_stokeQ  = '~/project_data/IRAS16293/image_FITS/ALMA_Band6_Pol/c2d_1008_Stokes.Q.regrid.fits'
+fname_qband_stokeQ  = '~/project_data/IRAS16293/image_FITS/JVLA_Qband_Pol/iras16293_Qband.rob0.Q.regrid.fits'
+fname_kuband_stokeQ = '~/project_data/IRAS16293/image_FITS/JVLA_Kuband_Pol/rob0/I16293_Kuband_A.rob0.Q.image.tt0.pbcor.subim.fits'
+
+fname_band6_stokeU  = '~/project_data/IRAS16293/image_FITS/ALMA_Band6_Pol/c2d_1008_Stokes.U.regrid.fits'
+fname_qband_stokeU  = '~/project_data/IRAS16293/image_FITS/JVLA_Qband_Pol/iras16293_Qband.rob0.U.regrid.fits'
+fname_kuband_stokeU = '~/project_data/IRAS16293/image_FITS/JVLA_Kuband_Pol/rob0/I16293_Kuband_A.rob0.U.image.tt0.pbcor.subim.fits'
 
 crop_sizeau = 200
 
@@ -178,8 +206,8 @@ data, header, wcs = get_info(fname_kuband_stokeI)
 # ra_ref = '16:32:22.6145'
 # dec_ref = '-24:28:32.555'
 # data, header, wcs = get_info(fname_qband_stokeI)
-date_obs = header['DATE-OBS']
-t = Time(date_obs, format='isot', scale='utc')
+
+t = Time(header['DATE-OBS'], format='isot', scale='utc')
 
 pm_ra = -11.8 * u.mas / u.yr  # Proper motion in right ascension
 pm_dec = -19.7 * u.mas / u.yr  # Proper motion in declination
@@ -196,79 +224,64 @@ obs_stokeI_fnames = [
     fname_kuband_stokeI
 ]
 
-obs_data = []
-for i, fname in enumerate(obs_stokeI_fnames):
-    data, header, wcs = get_info(fname)
-    beam_arcsec, beam_pixel, beam_pa, au_per_pix = get_beam_axis(header=header, distance_pc=distance)
-    beam_major_arcsec, beam_minor_arcsec = beam_arcsec
-    beam_major_pixels, beam_minor_pixels = beam_pixel
-    beam_info[i, :] = [beam_major_arcsec, beam_minor_arcsec, beam_pa]
+obs_stokeQ_fnames = [
+    fname_band6_stokeQ,
+    None,
+    fname_qband_stokeQ,
+    fname_kuband_stokeQ
+]
+obs_stokeU_fnames = [
+    fname_band6_stokeU,
+    None,
+    fname_qband_stokeU,
+    fname_kuband_stokeU
+]
 
-    date_obs = header['DATE-OBS']
-    t = Time(date_obs, format='isot', scale='utc')
-    coords_shifted = coord_ref.apply_space_motion(t)
-
-    if fname == fname_band6_stokeI_highres:
-        data_crop, wcs_crop = crop_around_coord(data[0, 0, :, :], wcs, coords_shifted, crop_sizeau, au_per_pix)
-    else:
-        data_crop, wcs_crop = crop_around_coord(data, wcs, coords_shifted, crop_sizeau, au_per_pix)
-    obs_data.append(data_crop)
-
-def plot_conti_column(ax, obs, model, lam, sizeau):
-
-
-    rotated_obs = rotate_image(obs, -90) # Rotate the image to match the model orientation (pa=0)
-    radial_obs_major, radial_obs_minor, center = radial_intensity(rotated_obs, center=None, width=5)
-
-    ax[0].imshow(rotated_obs, origin='lower', cmap="magma", vmin=0, vmax=np.nanmax(rotated_obs))
-    ax[0].text(0.05, 0.95, f'{lam*1e-3:.1f} mm', transform=ax[0].transAxes, fontsize=12, color='white', va='top')
-    ax[0].hlines(center, xmin=0, xmax=rotated_obs.shape[0]-1, color='violet', linestyle='--', linewidth=1)
-    ax[0].vlines(center, ymin=0, ymax=rotated_obs.shape[1]-1, color='dodgerblue', linestyle='--', linewidth=1)
-    ax[0].set_xticks([0, rotated_obs.shape[0]//2, rotated_obs.shape[0]-1])
-    ax[0].set_xticklabels([-(sizeau//2), 0, (sizeau//2)])
-    ax[0].set_xlabel('AU')
-    ax[0].set_yticks([0, rotated_obs.shape[1]//2, rotated_obs.shape[1]-1])
-    ax[0].set_yticklabels([-(sizeau//2), 0, (sizeau//2)])
-    ax[0].set_ylabel('AU')
-
-    radial_model_major, radial_model_minor, center = radial_intensity(model, center=None, width=5)
+obs_data_I = []
+obs_data_PA  = []
+obs_data_Per = []
+for i, (fname_I, fname_Q, fname_U) in enumerate(zip(obs_stokeI_fnames, obs_stokeQ_fnames, obs_stokeU_fnames)):
+    data_I, header_I, wcs_I = get_info(fname_I)
     
-    ax[1].imshow(model, origin='lower', cmap="magma", vmin=0, vmax=np.nanmax(rotated_obs))
-    ax[1].hlines(center, xmin=0, xmax=model.shape[0]-1, color='violet', linestyle='-', linewidth=1)
-    ax[1].vlines(center, ymin=0, ymax=model.shape[1]-1, color='dodgerblue', linestyle='-', linewidth=1)
-    ax[1].set_xticks([0, model.shape[0]//2, model.shape[0]-1])
-    ax[1].set_xticklabels([-(sizeau//2), 0, (sizeau//2)])
-    ax[1].set_xlabel('AU')
-    ax[1].set_yticks([0, model.shape[1]//2, model.shape[1]-1])
-    ax[1].set_yticklabels([-(sizeau//2), 0, (sizeau//2)])
-    ax[1].set_ylabel('AU')
+    beam_arcsec_I, beam_pixel_I, beam_pa_I, au_per_pix_I = get_beam_axis(header=header_I, distance_pc=distance)
+    beam_major_arcsec_I, beam_minor_arcsec_I = beam_arcsec_I
+    beam_major_pixels_I, beam_minor_pixels_I = beam_pixel_I
+    beam_info[i, :] = [beam_major_arcsec_I, beam_minor_arcsec_I, beam_pa_I]
 
-    interp_obs = ndimage.zoom(rotated_obs, zoom=model.shape[0] / rotated_obs.shape[0])
-    radial_obs_major, radial_obs_minor, center = radial_intensity(interp_obs, center=None, width=5)
+    coords_shifted_I = coord_ref.apply_space_motion(Time(header_I['DATE-OBS'], format='isot', scale='utc'))
+    if fname_I == fname_band6_stokeI_highres:
+        data_crop_I, wcs_crop_I = crop_around_coord(data_I[0, 0, :, :], wcs_I, coords_shifted_I, crop_sizeau, au_per_pix_I)
+    else:
+        data_crop_I, wcs_crop_I = crop_around_coord(data_I, wcs_I, coords_shifted_I, crop_sizeau, au_per_pix_I)
+    obs_data_I.append(data_crop_I)
 
-    residual = interp_obs - model
+    if (fname_Q is not None) or (fname_U is not None):
+        data_Q, header_Q, wcs_Q = get_info(fname_Q)
+        data_U, header_U, wcs_U = get_info(fname_U)
 
-    ax[2].imshow(residual, origin='lower', cmap="seismic", vmin=-(np.nanmax(rotated_obs)/2), vmax=np.nanmax(rotated_obs)/2)
-    ax[2].set_xticks([0, residual.shape[0]//2, residual.shape[0]-1])
-    ax[2].set_xticklabels([-(sizeau//2), 0, (sizeau//2)])
-    ax[2].set_xlabel('AU')
-    ax[2].set_yticks([0, residual.shape[1]//2, residual.shape[1]-1])
-    ax[2].set_yticklabels([-(sizeau//2), 0, (sizeau//2)])
-    ax[2].set_ylabel('AU')
+        beam_arcsec_plr, beam_pixel_plr, beam_pa_plr, au_per_pix_plr = get_beam_axis(header=header_Q, distance_pc=distance)
+        beam_major_arcsec_plr, beam_minor_arcsec_plr = beam_arcsec_plr
+        beam_major_pixels_plr, beam_minor_pixels_plr = beam_pixel_plr
+        beam_plr_info[i, :] = [beam_major_arcsec_plr, beam_minor_arcsec_plr, beam_pa_plr]
 
+        coords_shifted_plr = coord_ref.apply_space_motion(Time(header_Q['DATE-OBS'], format='isot', scale='utc'))
+        data_crop_Q, wcs_crop_Q = crop_around_coord(data_Q, wcs_Q, coords_shifted_plr, crop_sizeau, au_per_pix_plr)
+        data_crop_U, wcs_crop_U = crop_around_coord(data_U, wcs_U, coords_shifted_plr, crop_sizeau, au_per_pix_plr)
 
+        if fname_Q == fname_band6_stokeQ:
+            data_I, header_I, wcs_I = get_info(fname_band6_stokeI)
+            coords_shifted_I = coord_ref.apply_space_motion(Time(header_I['DATE-OBS'], format='isot', scale='utc'))
+            data_crop_I, wcs_crop_I = crop_around_coord(data_I, wcs_I, coords_shifted_I, crop_sizeau, au_per_pix_plr)
+        
+        PA = 0.5 * np.arctan2(data_crop_U, data_crop_Q)
+        Per = np.sqrt(data_crop_Q**2 + data_crop_U**2) / data_crop_I
 
-    ax[3].plot(np.linspace(-100, 100, num=radial_obs_major.size, endpoint=True), radial_obs_major, color='violet', linestyle='--')
-    ax[3].plot(np.linspace(-100, 100, num=radial_obs_minor.size, endpoint=True), radial_obs_minor, color='dodgerblue', linestyle='--')
-    ax[3].plot(np.linspace(-100, 100, num=radial_model_major.size, endpoint=True), radial_model_major, color='violet')
-    ax[3].plot(np.linspace(-100, 100, num=radial_model_minor.size, endpoint=True), radial_model_minor, color='dodgerblue')
-    ax[3].vlines(0, ymin=0, ymax=max(np.nanmax(radial_obs_major), np.nanmax(radial_model_major)), color='k', linestyle='--', linewidth=1)
-    ax[3].text(0.05, 0.95, f'{lam*1e-3:.1f} mm', transform=ax[3].transAxes, fontsize=12, color='k', va='top')
-    # ax[3].set_title(f'Radial profile at {lam} $\mu$m')
-    ax[3].set_xlabel('AU')
-    ax[3].set_ylabel('Intensity (Jy/pixel)')
-    ax[3].set_xlim((-(sizeau//2), sizeau//2))
-    ax[3].set_ylim(bottom=0)
+        obs_data_PA.append(PA)
+        obs_data_Per.append(Per)
+    else:
+        obs_data_PA.append(None)
+        obs_data_Per.append(None)
+
 
 def plot_conti_diff_params(simulation, obs, dir, fname):
     model_img = simulation.conti
@@ -277,13 +290,12 @@ def plot_conti_diff_params(simulation, obs, dir, fname):
     for i, lam in enumerate(obs_wav):
         
         conv_image = model_img.imConv(dpc=distance, fwhm=beam_info[i, :-1], pa=-(beam_info[i, -1]+90)) # Convolve with beam
-        sizeau = np.ceil(model_img.x[-1]/au * 2)
         npix = len(model_img.x)
-        pixel_area = (sizeau/npix/140)**2
+        pixel_area = (crop_sizeau/npix/140)**2
         beam_area = beam_info[i, 0]*beam_info[i, 0]*np.pi/(4*np.log(2))
         conv_image.imageJyppix *= beam_area/pixel_area/(distance**2) # Convert to Jy/pixel
         model = conv_image.imageJyppix[:, :, 0, i].T
-        obs = obs_data[i]
+        obs = obs_data_I[i]
 
         rotated_obs = rotate_image(obs, -90) # Rotate the image to match the model orientation (pa=0)
         radial_obs_major, radial_obs_minor, center = radial_intensity(rotated_obs, center=None, width=5)
@@ -293,10 +305,10 @@ def plot_conti_diff_params(simulation, obs, dir, fname):
         ax[0].hlines(center, xmin=0, xmax=rotated_obs.shape[0]-1, color='violet', linestyle='--', linewidth=1)
         ax[0].vlines(center, ymin=0, ymax=rotated_obs.shape[1]-1, color='dodgerblue', linestyle='--', linewidth=1)
         ax[0].set_xticks([0, rotated_obs.shape[0]//2, rotated_obs.shape[0]-1])
-        ax[0].set_xticklabels([-(sizeau//2), 0, (sizeau//2)])
+        ax[0].set_xticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
         ax[0].set_xlabel('AU')
         ax[0].set_yticks([0, rotated_obs.shape[1]//2, rotated_obs.shape[1]-1])
-        ax[0].set_yticklabels([-(sizeau//2), 0, (sizeau//2)])
+        ax[0].set_yticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
         ax[0].set_ylabel('AU')
 
         radial_model_major, radial_model_minor, center = radial_intensity(model, center=None, width=5)
@@ -305,10 +317,10 @@ def plot_conti_diff_params(simulation, obs, dir, fname):
         ax[1].hlines(center, xmin=0, xmax=model.shape[0]-1, color='violet', linestyle='-', linewidth=1)
         ax[1].vlines(center, ymin=0, ymax=model.shape[1]-1, color='dodgerblue', linestyle='-', linewidth=1)
         ax[1].set_xticks([0, model.shape[0]//2, model.shape[0]-1])
-        ax[1].set_xticklabels([-(sizeau//2), 0, (sizeau//2)])
+        ax[1].set_xticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
         ax[1].set_xlabel('AU')
         ax[1].set_yticks([0, model.shape[1]//2, model.shape[1]-1])
-        ax[1].set_yticklabels([-(sizeau//2), 0, (sizeau//2)])
+        ax[1].set_yticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
         ax[1].set_ylabel('AU')
 
         interp_obs = ndimage.zoom(rotated_obs, zoom=model.shape[0] / rotated_obs.shape[0])
@@ -318,10 +330,10 @@ def plot_conti_diff_params(simulation, obs, dir, fname):
 
         ax[2].imshow(residual, origin='lower', cmap="seismic", vmin=-(np.nanmax(rotated_obs)/2), vmax=np.nanmax(rotated_obs)/2)
         ax[2].set_xticks([0, residual.shape[0]//2, residual.shape[0]-1])
-        ax[2].set_xticklabels([-(sizeau//2), 0, (sizeau//2)])
+        ax[2].set_xticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
         ax[2].set_xlabel('AU')
         ax[2].set_yticks([0, residual.shape[1]//2, residual.shape[1]-1])
-        ax[2].set_yticklabels([-(sizeau//2), 0, (sizeau//2)])
+        ax[2].set_yticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
         ax[2].set_ylabel('AU')
 
 
@@ -335,8 +347,91 @@ def plot_conti_diff_params(simulation, obs, dir, fname):
         # ax[3].set_title(f'Radial profile at {lam} $\mu$m')
         ax[3].set_xlabel('AU')
         ax[3].set_ylabel('Intensity (Jy/pixel)')
-        ax[3].set_xlim((-(sizeau//2), sizeau//2))
+        ax[3].set_xlim((-(crop_sizeau//2), crop_sizeau//2))
         ax[3].set_ylim(bottom=0)
+    plt.tight_layout()
+    plt.savefig(f'{dir}{fname}.pdf', transparent=True)
+    plt.close()
+
+def b_segment(PA, Per, step=8):
+    y, x = np.mgrid[0:PA.shape[0], 0:PA.shape[1]]
+    x_sampled = x[::step, ::step]
+    y_sampled = y[::step, ::step]
+    angle_sampled = PA[::step, ::step] + np.pi / 2
+    intensity_sampled = Per[::step, ::step]
+    u_segment = (intensity_sampled/0.02) * np.cos(angle_sampled)
+    v_segment = (intensity_sampled/0.02) * np.sin(angle_sampled)
+    return x_sampled, y_sampled, u_segment, v_segment
+
+def plot_plr_diff_params(simulation, obs, dir, fname):
+    
+    obs_I, obs_PA, obs_Per = obs
+    model_img = simulation.conti
+
+    fig, axes = plt.subplots(2, len(obs_wav), figsize=(4*len(obs_wav), 2*len(obs_wav)))
+
+    sampled_step = [8, None, 9, 5]
+    for i, lam in enumerate(obs_wav):
+        ax = axes[:, i]
+        
+        rotated_obs_I = rotate_image(obs_I[i], -90) # Rotate the image to match the model orientation (pa=0)
+        if obs_PA[i] is None or obs_Per[i] is None:
+            ax[0].imshow(rotated_obs_I, origin='lower', cmap="magma", vmin=0, vmax=np.nanmax(rotated_obs_I), 
+                    extent=[0, rotated_obs_I.shape[1], 0, rotated_obs_I.shape[0]])
+        else:
+            rotated_obs_PA = rotate_image(obs_PA[i], -90)
+            rotated_obs_Per = rotate_image(obs_Per[i], -90)
+            if i == 0: # Band 6
+                interp_rotated_obs_I = ndimage.zoom(rotated_obs_I, zoom=rotated_obs_PA.shape[0] / rotated_obs_I.shape[0])
+                mask_obs = interp_rotated_obs_I > 10 * obs_rms[i]
+            else:
+                mask_obs = rotated_obs_I > 10 * obs_rms[i]
+            rotated_obs_PA[~mask_obs] = np.nan
+            rotated_obs_Per[~mask_obs] = np.nan
+            
+            
+            x_sampled_obs, y_sampled_obs, u_segment_obs, v_segment_obs = b_segment(rotated_obs_PA, rotated_obs_Per, step=sampled_step[i])
+            
+            ax[0].quiver(x_sampled_obs, y_sampled_obs, u_segment_obs, v_segment_obs, color='white', 
+                        scale=50, headlength=0, headaxislength=0, headwidth=0)
+            ax[0].imshow(rotated_obs_I, origin='lower', cmap="magma", vmin=0, vmax=np.nanmax(rotated_obs_I), 
+                    extent=[0, rotated_obs_PA.shape[1], 0, rotated_obs_PA.shape[0]])
+            ax[0].text(0.05, 0.95, f'{lam*1e-3:.1f} mm', transform=ax[0].transAxes, fontsize=12, color='white', va='top')
+            ax[0].set_xticks([0, rotated_obs_I.shape[0]//2, rotated_obs_I.shape[0]-1])
+            ax[0].set_xticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
+            ax[0].set_xlabel('AU')
+            ax[0].set_yticks([0, rotated_obs_I.shape[1]//2, rotated_obs_I.shape[1]-1])
+            ax[0].set_yticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
+            ax[0].set_ylabel('AU')
+            
+
+        conv_image_I   = model_img.imConv(dpc=distance, fwhm=beam_info[i, :-1], pa=-(beam_info[i, -1]+90)) # Convolve with beam
+        conv_image_plr = model_img.imConv(dpc=distance, fwhm=beam_plr_info[i, :-1], pa=-(beam_plr_info[i, -1]+90)) 
+        npix = len(model_img.x)
+        pixel_area = (crop_sizeau/npix/140)**2
+        beam_area_I = beam_info[i, 0]*beam_info[i, 0]*np.pi/(4*np.log(2))
+        conv_image_I.imageJyppix *= beam_area_I/pixel_area/(distance**2) # Convert to Jy/pixel
+        beam_area_plr = beam_plr_info[i, 0]*beam_plr_info[i, 0]*np.pi/(4*np.log(2))
+        conv_image_plr.imageJyppix *= beam_area_plr/pixel_area/(distance**2) # Convert to Jy/pixel
+        model_I = conv_image_I.imageJyppix[:, :, 0, i].T
+        mask_model = model_I > 10 * obs_rms[i]
+        model_Q = conv_image_plr.imageJyppix[:, :, 1, i].T
+        model_U = conv_image_plr.imageJyppix[:, :, 2, i].T
+        model_PA = 0.5 * np.arctan2(model_U, model_Q)
+        model_Per = np.sqrt(model_Q**2 + model_U**2) / model_I
+        model_PA[~mask_model] = np.nan
+        model_Per[~mask_model] = np.nan
+        x_sampled_model, y_sampled_model, u_segment_model, v_segment_model = b_segment(model_PA, model_Per, step=12)
+        ax[1].imshow(model_I, origin='lower', cmap="magma", vmin=0, vmax=np.nanmax(rotated_obs_I))
+        ax[1].quiver(x_sampled_model, y_sampled_model, u_segment_model, v_segment_model, color='white', 
+                     scale=50, headlength=0, headaxislength=0, headwidth=0)
+        ax[1].set_xticks([0, model_I.shape[0]//2, model_I.shape[0]-1])
+        ax[1].set_xticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
+        ax[1].set_xlabel('AU')
+        ax[1].set_yticks([0, model_I.shape[1]//2, model_I.shape[1]-1])
+        ax[1].set_yticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
+        ax[1].set_ylabel('AU')
+
     plt.tight_layout()
     plt.savefig(f'{dir}{fname}.pdf', transparent=True)
     plt.close()
@@ -392,14 +487,13 @@ def plot_sed_diff_params(simulation, dir, fname):
     plt.savefig(f'{dir}{fname}.pdf', transparent=True)
     plt.close()
     
-
 """
 Generate synthetic models and plot them
 """
 
-amax_list = [ 1e1,  1e0, 7e-1, 5e-1, 3e-1, 1e-1, 1e-2] # maximum grain sizes in mm
-Mdot_list = [1e-5, 1e-6, 1e-7, 1e-8] # accretion rates
-Q_list    = [ 1.5,    1,  0.5,  0.75, 0.3] # Toomre Q parameters
+amax_list = [ 1e1,  1e0, 7e-1, 5e-1, 3e-1, 1e-1, 5e-2, 1e-2] # maximum grain sizes in mm
+Mdot_list = [1e-4, 5e-4, 1e-5, 5e-5, 1e-6] # accretion rates
+Q_list    = [ 0.75,  0.6, 0.5, 0.4, 0.3] # Toomre Q parameters
 for i, amax in enumerate(amax_list):
     for j, mdot in enumerate(Mdot_list):
         for k, Q in enumerate(Q_list):
@@ -411,17 +505,45 @@ for i, amax in enumerate(amax_list):
             l_star      = .1 # stellar luminosity in solar luminosities
             heating     = 'accretion' # heating mechanism
 
-            # setup_model(amax, mdot, rd, Toomre_Q)
+            setup_model(amax, mdot, rd, Toomre_Q, align=False)
             # write_log()
             
-            simulation = generate_simulation(save_out=True, save_npz=True)
+            simulation = generate_simulation(save_out=True, save_npz=False)
             simulate_mutual_parms = {
                 "incl"      : 50,
                 "npix"      : 500,
-                "sizeau"    : 200,
+                "sizeau"    : crop_sizeau,
                 "posang"    : 0,
                 "phi"       : 0,
-                "dir"       : f'./simulation/amax_{amax}_Mdot_{mdot}_Q_{Toomre_Q}/',
+                "dir"       : f'./simulation/no_align/amax_{amax}_Mdot_{mdot}_Q_{Toomre_Q}/',
+            }
+            # simulation.generate_sed(
+            #     scat=True,
+            #     read_lambda=obs_wav*1e-3,
+            #     load_simulation=True,
+            #     fname='sed',
+            #     **simulate_mutual_parms
+            # )
+            simulation.generate_continuum(
+                scat=True,
+                stokes=True,
+                read_lambda=obs_wav*1e-3,
+                load_simulation=True,
+                fname=f'conti',
+                **simulate_mutual_parms
+            )
+
+
+
+            setup_model(amax, mdot, rd, Toomre_Q, align=True)
+            simulation = generate_simulation(save_out=True, save_npz=False)
+            simulate_mutual_parms = {
+                "incl"      : 50,
+                "npix"      : 500,
+                "sizeau"    : crop_sizeau,
+                "posang"    : 0,
+                "phi"       : 0,
+                "dir"       : f'./simulation/with_align/amax_{amax}_Mdot_{mdot}_Q_{Toomre_Q}/',
             }
             # simulation.generate_sed(
             #     scat=True,
@@ -440,45 +562,9 @@ for i, amax in enumerate(amax_list):
             )
 
             # plot_sed_diff_params(simulation, dir=simulate_mutual_parms["dir"], fname='sed')
-            plot_conti_diff_params(simulation, obs_data, dir=simulate_mutual_parms["dir"], fname='conti')
-
-            # fig, ax = plt.subplots(4, len(obs_wav), figsize=(4*len(obs_wav), 4*len(obs_wav)))
-            # fig_pol, ax_pol = plt.subplots(4, len(obs_wav), figsize=(4*len(obs_wav), 4*len(obs_wav)))
-            # measured_fluxes = []
-            # for i, lam in enumerate(obs_wav):
-            #     simulation.generate_continuum(
-            #         scat=True,
-            #         wav=lam,
-            #         stokes=True,
-            #         load_simulation=True,
-            #         fname=f'wav_{lam}',
-            #         **simulate_mutual_parms
-            #     )
-                
-            #     model_img = simulation.conti
-            #     conv_image = model_img.imConv(dpc=distance, fwhm=beam_info[i, :-1], pa=-(beam_info[i, -1]+90)) # Convolve with beam
-            #     sizeau = model_img.x[-1]/au
-            #     npix = len(model_img.x)
-            #     pixel_area = (sizeau/npix/140)**2
-            #     beam_area = beam_info[i, 0]*beam_info[i, 0]*np.pi/(4*np.log(2))
-            #     conv_image.imageJyppix *= beam_area/pixel_area/(distance**2) # Convert to Jy/beam
-            #     flux_density, uncertainty = get_flux_density(conv_image.imageJyppix[:, :, 0, 0].T, obs_rms[i], beam_area/pixel_area)
-            #     nu = (1e-2*cc)*1e-9/(1e-6*lam) # GHz
-            #     plt.scatter(nu, flux_density*1e3, marker='x', color='red', label=f'radmc3d image {lam*1e-3:.1f} mm', s=100) # mJy
-            # radmc_spec = simulation.spectrum
-            # nu = (1e-2*cc)*1e-9/(1e-6*radmc_spec[:, 0]) # GHz
-            # fnu = radmc_spec[:, 1]*1e26/(140**2) # mJy
-            # plt.plot(nu, fnu, label='radmc3d spectrum', color='violet')
-            # plt.xscale('log'); plt.xlim((1e+1, 5e2))
-            # plt.yscale('log'); plt.ylim((1e-2, 2e5))
-            # plt.xlabel('Frequency (GHz)', fontsize=14)
-            # plt.ylabel('Flux Density (mJy)', fontsize=14)
-            # plt.title('Compare spectrum and image commands', fontsize=16)
-            # plt.grid(True, which='major', linestyle='--', linewidth=0.5)
-            # plt.legend(loc='upper left')
-            # plt.savefig(f'{simulate_mutual_parms["dir"]}compare_sed.pdf', transparent=True)
-            # plt.close()
-
+            # plot_conti_diff_params(simulation, obs_data, dir=simulate_mutual_parms["dir"], fname='conti')
+            # plot_plr_diff_params(simulation, obs=(obs_data_I, obs_data_PA, obs_data_Per),
+            #                      dir=simulate_mutual_parms["dir"], fname='plr')
             
              
 
