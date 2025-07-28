@@ -317,7 +317,7 @@ class radmc3d_setup:
                     inputstyle = 20
                 else:
                     inputstyle = 10
-        self.inputstyle = inputstyle
+        self.dustkap_inputstyle = inputstyle
         '''
         1 : dustkappa_*.inp file
         10: dustkapscatmat_*.inp file without grain alignment (read Z matrix)
@@ -336,6 +336,7 @@ class radmc3d_setup:
     def get_diskcontrol(self, 
                         d_to_g_ratio = 0.01,
                                a_max = None,
+                         a_max_outer = None,
                                    q = -3.5,
                         Mass_of_star = None,
                       Accretion_rate = None,
@@ -344,6 +345,7 @@ class radmc3d_setup:
                                   NR = None,
                               NTheta = None,
                                 NPhi = None,
+                  dustkap_inputstyle = None,
                  generate_table_only = False
                       ):
         '''
@@ -370,15 +372,9 @@ class radmc3d_setup:
         NTheta : int
             Resolution in theta axis
         NPhi : int
-            Resolution in ohi axis
+            Resolution in phi axis
         '''
-        if a_max is None:                   a_max = 0.1  # 100 um
-        self.amax = a_max
-        # CB68's properties
-        if Mass_of_star is None:     Mass_of_star = 0.14
-        if Accretion_rate is None: Accretion_rate = 5e-7
-        if Radius_of_disk is None: Radius_of_disk = 50
-            
+        
         # grid's resolution
         if NR is None:                         NR = 200
         if NTheta is None:                 NTheta = 200
@@ -389,10 +385,10 @@ class radmc3d_setup:
         self.dust_to_gas_ratio = d_to_g_ratio
         # note: the original a_max is in cm
         # a_min is set to be 0.05 um = 5e-6 cm
-        
+        if dustkap_inputstyle is None: self.dustkap_inputstyle = 20
         self.opacity_table  = generate_opacity_table_opt(a_min=1e-6, a_max=a_max*0.1,
                                                     q=q, dust_to_gas=d_to_g_ratio,
-                                                    inputstyle=self.inputstyle)
+                                                    inputstyle=self.dustkap_inputstyle)
         
         self.disk_property_table = generate_disk_property_table(self.opacity_table)
         if generate_table_only is True:
@@ -415,21 +411,124 @@ class radmc3d_setup:
         self.NR    = DM.NR
         self.NTheta = DM.NTheta
         self.NPhi  = DM.NPhi
-        
+        self.layered_disk = False
 
-        
-        # f = open(self.filename, 'r+')
-        # content = f.read()
-        # f.seek(0,0)
-        # f.write(f'# a_max = {a_max} mm \n')
-        # f.write(f'# Mstar = {Mass_of_star} Msun \n')
-        # f.write(f'# Mdot = {Accretion_rate} Msun/yr \n')
-        # f.write(f'# Rd = {Radius_of_disk} AU \n')
-        # f.write(content)
-        # f.close()
-        
+        if a_max_outer is not None:
+            self.opacity_table  = generate_opacity_table_opt(a_min=1e-6, a_max=a_max_outer*0.1,
+                                                        q=q, dust_to_gas=d_to_g_ratio,
+                                                        inputstyle=self.dustkap_inputstyle,
+                                                        save_table=False,
+                                                        table_cache='./opacity_table_outer/', keep_cache=True)
+            print('small outer layer')
+            os.system(f'cp -r ./opacity_table_outer/dustkapscatmat.inp ./dustkapscatmat_temp_4.inp')
+            os.system('rm -r ./opacity_table_outer')
+            self.disk_property_table = generate_disk_property_table(self.opacity_table)
+            
+            DM = DiskModel_spherical(self.opacity_table, self.disk_property_table)
+            
+            self.Mstar = Mass_of_star
+            self.Rd = Radius_of_disk
+            DM.input_disk_parameter(Mstar=Mass_of_star*Msun,
+                                    Mdot=Accretion_rate*Msun/yr,
+                                    Rd=self.Rd*au,
+                                    Q=Q,
+                                    N_R=NR
+                                    )
+
+            DM.extend_to_spherical(NTheta=NTheta, NPhi=NPhi)
+            self.DM_outer = DM
+            self.layered_disk = True
+
         self.write_amr_grid()
         self.write_dust_density()
+
+
+    # def get_diskcontrol(self, 
+    #                     d_to_g_ratio = 0.01,
+    #                            a_max = None,
+    #                                q = -3.5,
+    #                     Mass_of_star = None,
+    #                   Accretion_rate = None,
+    #                   Radius_of_disk = None,
+    #                                Q = 1.5,
+    #                               NR = None,
+    #                           NTheta = None,
+    #                             NPhi = None,
+    #              generate_table_only = False
+    #                   ):
+    #     '''
+    #     Preparing the control file for disk model.
+
+    #     Parameters
+    #     ----------------------------
+    #     d_to_g_ratio : float
+    #         dust-to-gas mass ratio 
+    #     a_max : float
+    #         Maxmum grain size (unit: mm)
+    #     q : float
+    #         Slope for grain size distribution
+    #     Mass_of_star : float
+    #         Mass of protostar (unit: M_sun)
+    #     Accretion_rate : float
+    #         Accretion rate    (unit: M_sun/yr)
+    #     Radius_of_disk : float
+    #         Radius of disk    (unit: AU)
+    #     Q : float
+    #         Toomre index
+    #     NR : int
+    #         Resolution in R axis
+    #     NTheta : int
+    #         Resolution in theta axis
+    #     NPhi : int
+    #         Resolution in ohi axis
+    #     '''
+    #     if a_max is None:                   a_max = 0.1  # 100 um
+    #     self.amax = a_max
+    #     # CB68's properties
+    #     if Mass_of_star is None:     Mass_of_star = 0.14
+    #     if Accretion_rate is None: Accretion_rate = 5e-7
+    #     if Radius_of_disk is None: Radius_of_disk = 50
+            
+    #     # grid's resolution
+    #     if NR is None:                         NR = 200
+    #     if NTheta is None:                 NTheta = 200
+    #     if NPhi is None:                     NPhi = 10
+        
+    #     # Disk model
+        
+    #     self.dust_to_gas_ratio = d_to_g_ratio
+    #     # note: the original a_max is in cm
+    #     # a_min is set to be 0.05 um = 5e-6 cm
+        
+    #     self.opacity_table  = generate_opacity_table_opt(a_min=1e-6, a_max=a_max*0.1,
+    #                                                 q=q, dust_to_gas=d_to_g_ratio,
+    #                                                 inputstyle=self.inputstyle)
+        
+    #     self.disk_property_table = generate_disk_property_table(self.opacity_table)
+    #     if generate_table_only is True:
+    #         return
+        
+    #     DM = DiskModel_spherical(self.opacity_table, self.disk_property_table)
+        
+    #     self.Mstar = Mass_of_star
+    #     self.Rd = Radius_of_disk
+    #     DM.input_disk_parameter(Mstar=Mass_of_star*Msun,
+    #                             Mdot=Accretion_rate*Msun/yr,
+    #                             Rd=self.Rd*au,
+    #                             Q=Q,
+    #                             N_R=NR
+    #                             )
+
+    #     DM.extend_to_spherical(NTheta=NTheta, NPhi=NPhi)
+    #     self.DM = DM
+        
+    #     self.NR    = DM.NR
+    #     self.NTheta = DM.NTheta
+    #     self.NPhi  = DM.NPhi
+        
+        
+    #     self.write_amr_grid()
+    #     self.write_dust_density()
 
     def write_amr_grid(self):
         
@@ -457,18 +556,27 @@ class radmc3d_setup:
         '''
         Preparing the control file for dust density.
         '''
-        nspec     = self.dust_spec
         T_crit = [150, 425, 680, 1200]
+        nspec     = len(T_crit)
         rho_dust = []
         for i, t_crit in enumerate(T_crit):
             if i == 0:
-                rho_dust.append(
-                    np.where(
-                    self.DM.T_sph <= t_crit,
-                    self.DM.rho_sph,
-                    1e-20
+                if self.layered_disk is False:
+                    rho_dust.append(
+                        np.where(
+                        self.DM.T_sph <= t_crit,
+                        self.DM.rho_sph,
+                        1e-20
+                        )
                     )
-                )
+                else:
+                    rho_dust.append(
+                        np.where(
+                        self.DM.T_sph <= t_crit,
+                        self.DM_outer.rho_sph,
+                        1e-20
+                        )
+                    )
             else:
                 density_dust = np.where(
                     self.DM.T_sph <= t_crit,
