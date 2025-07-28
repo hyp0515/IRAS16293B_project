@@ -491,9 +491,9 @@ def plot_sed_diff_params(simulation, dir, fname):
 Generate synthetic models and plot them
 """
 
-amax_list = [ 1e1,  1e0, 7e-1, 5e-1, 3e-1, 1e-1, 5e-2, 1e-2] # maximum grain sizes in mm
-Mdot_list = [1e-4, 5e-4, 1e-5, 5e-5, 1e-6] # accretion rates
-Q_list    = [ 0.75,  0.6, 0.5, 0.4, 0.3] # Toomre Q parameters
+amax_list = [  1e1,  1e0, 7e-1, 5e-1, 3e-1, 1e-1, 5e-2, 1e-2] # maximum grain sizes in mm
+Mdot_list = [ 1e-4, 5e-4, 1e-5, 5e-5, 1e-6] # accretion rates
+Q_list    = [  0.8,  0.7,  0.6,  0.5,  0.4,  0.3] # Toomre Q parameters
 for i, amax in enumerate(amax_list):
     for j, mdot in enumerate(Mdot_list):
         for k, Q in enumerate(Q_list):
@@ -505,9 +505,9 @@ for i, amax in enumerate(amax_list):
             l_star      = .1 # stellar luminosity in solar luminosities
             heating     = 'accretion' # heating mechanism
 
+            # without alignment
             setup_model(amax, mdot, rd, Toomre_Q, align=False)
-            # write_log()
-            
+            write_log('/run/media/hyp0515/storage/simulation_new/log.txt')
             simulation = generate_simulation(save_out=True, save_npz=False)
             simulate_mutual_parms = {
                 "incl"      : 50,
@@ -515,26 +515,30 @@ for i, amax in enumerate(amax_list):
                 "sizeau"    : crop_sizeau,
                 "posang"    : 0,
                 "phi"       : 0,
-                "dir"       : f'./simulation/no_align/amax_{amax}_Mdot_{mdot}_Q_{Toomre_Q}/',
+                "dir"       : f'/run/media/hyp0515/storage/simulation_new/no_align/amax_{amax}_Mdot_{mdot}_Q_{Toomre_Q}/',
             }
-            # simulation.generate_sed(
-            #     scat=True,
-            #     read_lambda=obs_wav*1e-3,
-            #     load_simulation=True,
-            #     fname='sed',
-            #     **simulate_mutual_parms
-            # )
+            simulation.generate_sed(
+                scat=True,
+                read_lambda=obs_wav*1e-3,
+                load_simulation=False,
+                fname='sed',
+                **simulate_mutual_parms
+            )
             simulation.generate_continuum(
                 scat=True,
                 stokes=True,
                 read_lambda=obs_wav*1e-3,
-                load_simulation=True,
+                load_simulation=False,
                 fname=f'conti',
                 **simulate_mutual_parms
             )
 
+            plot_sed_diff_params(simulation, dir=simulate_mutual_parms["dir"], fname='sed')
+            plot_conti_diff_params(simulation, obs_data_I, dir=simulate_mutual_parms["dir"], fname='conti')
+            plot_plr_diff_params(simulation, obs=(obs_data_I, obs_data_PA, obs_data_Per),
+                                 dir=simulate_mutual_parms["dir"], fname='plr')
 
-
+            # Now with alignment
             setup_model(amax, mdot, rd, Toomre_Q, align=True)
             simulation = generate_simulation(save_out=True, save_npz=False)
             simulate_mutual_parms = {
@@ -543,28 +547,28 @@ for i, amax in enumerate(amax_list):
                 "sizeau"    : crop_sizeau,
                 "posang"    : 0,
                 "phi"       : 0,
-                "dir"       : f'./simulation/with_align/amax_{amax}_Mdot_{mdot}_Q_{Toomre_Q}/',
+                "dir"       : f'/run/media/hyp0515/storage/simulation_new/with_align/amax_{amax}_Mdot_{mdot}_Q_{Toomre_Q}/',
             }
-            # simulation.generate_sed(
-            #     scat=True,
-            #     read_lambda=obs_wav*1e-3,
-            #     load_simulation=True,
-            #     fname='sed',
-            #     **simulate_mutual_parms
-            # )
+            simulation.generate_sed(
+                scat=True,
+                read_lambda=obs_wav*1e-3,
+                load_simulation=False,
+                fname='sed',
+                **simulate_mutual_parms
+            )
             simulation.generate_continuum(
                 scat=True,
                 stokes=True,
                 read_lambda=obs_wav*1e-3,
-                load_simulation=True,
+                load_simulation=False,
                 fname=f'conti',
                 **simulate_mutual_parms
             )
 
-            # plot_sed_diff_params(simulation, dir=simulate_mutual_parms["dir"], fname='sed')
-            # plot_conti_diff_params(simulation, obs_data, dir=simulate_mutual_parms["dir"], fname='conti')
-            # plot_plr_diff_params(simulation, obs=(obs_data_I, obs_data_PA, obs_data_Per),
-            #                      dir=simulate_mutual_parms["dir"], fname='plr')
+            plot_sed_diff_params(simulation, dir=simulate_mutual_parms["dir"], fname='sed')
+            plot_conti_diff_params(simulation, obs_data_I, dir=simulate_mutual_parms["dir"], fname='conti')
+            plot_plr_diff_params(simulation, obs=(obs_data_I, obs_data_PA, obs_data_Per),
+                                 dir=simulate_mutual_parms["dir"], fname='plr')
             
              
 
