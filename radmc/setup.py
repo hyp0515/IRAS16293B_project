@@ -1103,6 +1103,9 @@ class Model:
             inputstyle=20
         ):
         
+        if not os.path.exists(table_cache):
+            os.makedirs(table_cache)
+
         prompt = f'optool -a {a_min*1e3} {a_max*1e3} {-q} -l 0.5 50000 101 -mie -radmc '
 
         if inputstyle == 10 or inputstyle == 20:
