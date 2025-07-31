@@ -129,7 +129,7 @@ class DiskModel_spherical:
                 rho_map[r, :] = 1e-20 * np.ones((len(self.Z_grid)))
                 m_map[r, :]   = 1e-20 * np.ones((len(self.Z_grid)))
         
-        self.rho_map = np.maximum(rho_map, 1e-20)
+        self.rho_map = np.maximum(rho_map, 1e-18)
         self.m_map   = m_map
         self.H       = h_grid
         self.make_tau_and_T_map()
@@ -197,7 +197,7 @@ class DiskModel_spherical:
         # kappa_r_map = kappa_r_map[:, ::-1]
         
         T_map = np.concatenate((20*np.ones((self.mask_index, self.NZ)), T_map), axis=0)
-        T_map = np.where(self.rho_map<=1e-20,
+        T_map = np.where(self.rho_map<=1e-18,
                          20,
                          T_map)
         self.T_map = np.maximum(T_map, 20)
