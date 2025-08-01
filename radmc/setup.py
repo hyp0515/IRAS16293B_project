@@ -1103,6 +1103,9 @@ class Model:
             inputstyle=20
         ):
         
+        if not os.path.exists(table_cache):
+            os.makedirs(table_cache)
+
         prompt = f'optool -a {a_min*1e3} {a_max*1e3} {-q} -l 0.5 50000 101 -mie -radmc '
 
         if inputstyle == 10 or inputstyle == 20:
@@ -1112,14 +1115,11 @@ class Model:
 
             material_frac = ['h2o-w 0.2', 'c-org 0.3966', 'fes 0.0743', 'astrosil 0.3291']
             fnames = ['temp_regime_1', 'temp_regime_2', 'temp_regime_3', 'temp_regime_4']
-            
-
             for idx in range(len(material_frac)):
                 p = optool.particle(prompt + f'-c {' '.join(material_frac[(idx):])}',
                                     cache=f'./{table_cache}/{fnames[idx]}/',
                                     silent=True)
-
-        if composition.lower() == 'dsharp':
+        elif composition.lower() == 'dsharp':
             p = optool.particle(prompt + f'-dsharp',
                                 cache=f'./{table_cache}/dsharp/',
                                 silent=True)

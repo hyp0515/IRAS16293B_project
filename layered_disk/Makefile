@@ -6,11 +6,12 @@ cleanmodel:
 	@echo All .o, .mod, .out files and most .inp files removed.
 
 cleanall:
-	@rm -f	*.o *.mod *.pyc *.dat *.out *.info *.used           \
+	@rm -rf	*.o *.mod *.pyc *.dat *.out *.info *.used           \
 	   *wavelength_micron.inp dustopac.inp dust_density.inp     \
 	   dustkappa_*.inp                                          \
 	   dustkapscatmat_*.inp                                     \
 	   dustkapalignfact_*.inp                                   \
+	   ./kappa                                                  \
 	   grainalign_dir*.inp                                      \
 	   camera_wavelength_micro.inp                              \
 	   gas_velocity.inp lines.inp                               \
