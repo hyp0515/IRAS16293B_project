@@ -17,7 +17,7 @@ from radmc3dPy.analyze import *
 sys.path.append('..')
 from X22_model.disk_model import generate_disk_property_table
 from radmc.setup import *
-from radmc.simulate import generate_simulation
+from radmc.simulate import Simulation
 from sed.plot_sed import HG_19_data, this_work_data
 
 """
@@ -633,14 +633,14 @@ Generate synthetic models and plot them
 ain_list = [1e0, 7e-1, 5e-1, 3e-1, 1e-1, 5e-2] # maximum grain sizes in mm
 aout_list = [1e0, 7e-1, 5e-1, 3e-1, 1e-1, 5e-2] # maximum grain sizes in mm
 Mdot_list = [5e-4, 1e-5, 5e-5, 1e-6] # accretion rates
-Q_list    = [0.7,  0.5,  0.3] # Toomre Q parameters
+Q_list    = [0.7,  0.5,  0.3] # Toomre Q parameters 
 
 for ain in ain_list:
     for aout in aout_list:
         for mdot in Mdot_list:
             for Q in Q_list:
                 setup_model(ain, aout, mdot, 35, Q, align=False)
-                simulation = generate_simulation(save_out=True, save_npz=False)
+                simulation = Simulation(save_out=True, save_npz=False)
                 simulate_mutual_parms = {
                     "incl"      : 50,
                     "npix"      : 500,

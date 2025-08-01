@@ -17,7 +17,7 @@ from radmc3dPy.analyze import *
 sys.path.append('..')
 from X22_model.disk_model import generate_disk_property_table
 from radmc.setup import *
-from radmc.simulate import generate_simulation
+from radmc.simulate import Simulation
 
 
 SPH = Grid()
@@ -107,7 +107,7 @@ setup.get_dustalignmentcontrol(alpha=1/(10*au*au),
                                 toroidal=False)
 
 
-simulation = generate_simulation(save_out=True, save_npz=False)
+simulation = Simulation(save_out=True, save_npz=False)
 simulate_mutual_parms = {
     "incl"      : 50,
     "npix"      : 500,

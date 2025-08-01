@@ -4,7 +4,7 @@ from radmc3dPy.image import *
 from radmc3dPy.analyze import *
 from radmc3dPy.data import *
 
-class generate_simulation:
+class Simulation:
     
     def __init__(self,
                  save_npz=True,
