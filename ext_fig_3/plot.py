@@ -503,31 +503,31 @@ def save_image_to_fits(model_image, beam_info, coords, fname, stokes=['I', 'Q', 
 
 a_list = [10, 50, 100, 200, 400, 800, 1600, 3200, 6400, 12800]
 
-# for ain in a_list:
-#     incl = 45
-#     ain = ain * 1e-3  # Convert um to mm
-#     mdot= 5e-5
-#     rd = 35
-#     Q = 0.5
+for ain in a_list:
+    incl = 45
+    ain = ain * 1e-3  # Convert um to mm
+    mdot= 5e-5
+    rd = 35
+    Q = 0.5
 
-#     setup_model(ain, None, mdot, rd, Q, align=True)
-#     simulation = Simulation(save_out=True, save_npz=False)
-#     simulate_mutual_parms = {
-#         "incl"      : incl,
-#         "npix"      : 500,
-#         "sizeau"    : crop_sizeau,
-#         "posang"    : 0,
-#         "phi"       : 0,
-#         "dir"       : f'/run/media/hyp0515/storage/ext_fig_3/amax_{ain}/',
-#     }
-#     simulation.generate_continuum(
-#         scat=True,
-#         stokes=True,
-#         read_lambda=obs_wav*1e-3,
-#         load_simulation=False,
-#         fname=f'conti',
-#         **simulate_mutual_parms
-#     )
+    setup_model(ain, None, mdot, rd, Q, align=False)
+    simulation = Simulation(save_out=True, save_npz=False)
+    simulate_mutual_parms = {
+        "incl"      : incl,
+        "npix"      : 500,
+        "sizeau"    : crop_sizeau,
+        "posang"    : 0,
+        "phi"       : 0,
+        "dir"       : f'/run/media/hyp0515/storage/ext_fig_3_noscat/amax_{ain}/',
+    }
+    simulation.generate_continuum(
+        scat=False,
+        stokes=True,
+        read_lambda=obs_wav*1e-3,
+        load_simulation=False,
+        fname=f'conti',
+        **simulate_mutual_parms
+    )
 
 def b_T(wav, beam_info, data_jybeam):
     return 1.36*(wav*1e-1*1e-3)**2*data_jybeam*1e3 / (beam_info[0] * beam_info[1])
@@ -589,10 +589,10 @@ for j, ain in enumerate(np.array(a_list)*1e-3):
         "sizeau"    : crop_sizeau,
         "posang"    : 0,
         "phi"       : 0,
-        "dir"       : f'/run/media/hyp0515/storage/ext_fig_3/amax_{ain}/',
+        "dir"       : f'/run/media/hyp0515/storage/ext_fig_3_noscat/amax_{ain}/',
     }
     simulation.generate_continuum(
-        scat=True,
+        scat=False,
         stokes=True,
         read_lambda=obs_wav*1e-3,
         load_simulation=True,
@@ -632,5 +632,5 @@ for j, ain in enumerate(np.array(a_list)*1e-3):
         ax[i].set_yticks([])
 
 # plt.tight_layout()
-plt.savefig('./ext_fig_3.pdf', transparent=True)
+plt.savefig('./ext_fig_3_noscat.pdf', transparent=True)
 # plt.show()
