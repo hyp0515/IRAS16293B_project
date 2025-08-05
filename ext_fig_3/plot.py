@@ -23,64 +23,7 @@ from sed.plot_sed import HG_19_data, this_work_data
 """
 Define functions to analyze the synthetic and observed polarization data.
 """
-def setup_model(amax_inner, amax_middle, amax_outer, mdot, rd, Toomre_Q, align=True):
-    # model = radmc3d_setup(silent=False)
-    # if align is False:
-    #     model.get_mastercontrol(filename=None,
-    #                             comment=None,
-    #                             incl_dust=1,
-    #                             incl_lines=0,
-    #                             nphot=500000,
-    #                             nphot_scat=5000000,
-    #                             nphot_spec=500000,
-    #                             scattering_mode_max=5,
-    #                             istar_sphere=1,
-    #                             num_cpu=None,
-    #                             modified_random_walk = 1,
-    #                             # alignment_mode=-1, # 1 for grain alignment
-    #                             )
-    # else:
-    #     model.get_mastercontrol(filename=None,
-    #                             comment=None,
-    #                             incl_dust=1,
-    #                             incl_lines=0,
-    #                             nphot=500000,
-    #                             nphot_scat=5000000,
-    #                             nphot_spec=500000,
-    #                             scattering_mode_max=5,
-    #                             istar_sphere=1,
-    #                             num_cpu=None,
-    #                             modified_random_walk = 1,
-    #                             alignment_mode=-1,
-    #                             )
-    # model.get_continuumlambda(filename=None,
-    #                         comment=None,
-    #                         lambda_micron=None,
-    #                         append=False)
-    # if align is False:
-    #     model.write_dust_opac(inputstyle=10, grain_align=False)
-    # else:
-    #     model.write_dust_opac(inputstyle=20, grain_align=True)
-    # model.get_diskcontrol(  d_to_g_ratio    = 0.01,
-    #                         a_max           = amax_inner, # mm
-    #                         Mass_of_star    = 0.5, # Msun
-    #                         Accretion_rate  = mdot, # Msun/yr
-    #                         Radius_of_disk  = rd,   # AU
-    #                         Q               = Toomre_Q, # Toomre Q
-    #                         NR    =200,
-    #                         NTheta=200,
-    #                         NPhi  =100,
-    #                         )
-    # model.get_heatcontrol(L_star=0.1, # Lsun
-    #                     R_star=1,
-    #                     heat='accretion') # radiation/accretion
-
-    # model.get_dustalignmentcontrol(alpha=1/(10*au*au), 
-    #                             hourglass=True, 
-    #                             uniform_z=True, 
-    #                             uniform_x=False, 
-    #                             uniform_y=False,
-    #                             toroidal=False)
+def setup_model(amax_inner, amax_outer, mdot, rd, Toomre_Q, align=True):
     if align:
         inputstyle_index = 20
         align_model_index = -1
@@ -117,56 +60,6 @@ def setup_model(amax_inner, amax_middle, amax_outer, mdot, rd, Toomre_Q, align=T
         Radius_of_disk=rd,
         Q=Toomre_Q,
     )
-    rho = model.rho_dust
-
-    middle_model = Model()
-    opacity_dir_mid = ['temp_regime_1_middle', 'temp_regime_2_middle', 'temp_regime_3_middle', 'temp_regime_4_middle']
-    middle_model.generate_opacity_optool(a_max=amax_middle, composition='X22', 
-                                        fnames=opacity_dir_mid, inputstyle=inputstyle_index)
-    opacity_tables_middle = []
-    for dir in opacity_dir_mid:
-        p = optool.particle('',
-                            cache=f'./kappa/{dir}/',
-                            silent=True)
-        opacity_tables_middle.append(p)
-    middle_opacity = middle_model.combine_opacity_tables(opacity_tables_middle,
-                                T_crit=[150, 425, 680, 1200],
-                                fraction=[0.2, 0.3966, 0.0743, 0.3291],)
-    middle_layer = middle_model.X22(
-        opacity_table=middle_opacity,
-        Mass_of_star=0.5,
-        Accretion_rate=mdot,
-        Radius_of_disk=rd,
-        Q=Toomre_Q,
-    )
-    rho[:, :, :, 1] = middle_model.rho_dust[:, :, :, 1]
-
-
-    outer_model = Model()
-    opacity_dir_outer = ['temp_regime_1_outer', 'temp_regime_2_outer', 'temp_regime_3_outer', 'temp_regime_4_outer']
-    outer_model.generate_opacity_optool(a_max=amax_outer, composition='X22', 
-                                        fnames=opacity_dir_outer, inputstyle=inputstyle_index)
-    opacity_tables_outer = []
-    for dir in opacity_dir_outer:
-        p = optool.particle('',
-                            cache=f'./kappa/{dir}/',
-                            silent=True)
-        opacity_tables_outer.append(p)
-    outer_opacity = outer_model.combine_opacity_tables(opacity_tables_outer,
-                                T_crit=[150, 425, 680, 1200],
-                                fraction=[0.2, 0.3966, 0.0743, 0.3291],)
-    outer_layer = outer_model.X22(
-        opacity_table=outer_opacity,
-        Mass_of_star=0.5,
-        Accretion_rate=mdot,
-        Radius_of_disk=rd,
-        Q=Toomre_Q,
-    )
-    rho[:, :, :, 0] = outer_model.rho_dust[:, :, :, 0]
-
-
-
-    model.rho_dust = rho
 
     model.interp_model_to_grid(grid=SPH)
 
@@ -191,10 +84,9 @@ def setup_model(amax_inner, amax_middle, amax_outer, mdot, rd, Toomre_Q, align=T
                             append=False,
                             silent=True)
     setup.write_amr_grid()
-    setup.write_dust_opac(dust_type=opacity_dir_outer[:1]+opacity_dir_inner[1:], inputstyle=inputstyle_index, grain_align=align)
+    setup.write_dust_opac(dust_type=opacity_dir_inner, inputstyle=inputstyle_index, grain_align=align)
     setup.write_density_file()
     setup.write_temperature_file()
-    # os.system('radmc3d mctherm')
     setup.get_dustalignmentcontrol(alpha=1/(10*au*au), 
                                     hourglass=True, 
                                     uniform_z=True, 
@@ -513,8 +405,8 @@ def plot_plr_diff_params(simulation, obs, dir, fname):
             
             x_sampled_obs, y_sampled_obs, u_segment_obs, v_segment_obs = b_segment(rotated_obs_PA, rotated_obs_Per, step=sampled_step[i])
             
-            ax[0].quiver(x_sampled_obs, y_sampled_obs, u_segment_obs, v_segment_obs, color='cyan', 
-                        scale=50, headlength=0, headaxislength=0, headwidth=0, pivot='middle')
+            ax[0].quiver(x_sampled_obs, y_sampled_obs, u_segment_obs, v_segment_obs, color='white', 
+                        scale=50, headlength=0, headaxislength=0, headwidth=0)
             ax[0].imshow(rotated_obs_I, origin='lower', cmap="magma", vmin=0, vmax=np.nanmax(rotated_obs_I), 
                     extent=[0, rotated_obs_PA.shape[1], 0, rotated_obs_PA.shape[0]])
             ax[0].text(0.05, 0.95, f'{lam*1e-3:.1f} mm', transform=ax[0].transAxes, fontsize=12, color='white', va='top')
@@ -577,7 +469,7 @@ def plot_plr_diff_params(simulation, obs, dir, fname):
         model_Per[~mask_model] = np.nan
         x_sampled_model, y_sampled_model, u_segment_model, v_segment_model = b_segment(model_PA, model_Per, step=15)
         ax[1].imshow(model_I, origin='lower', cmap="magma", vmin=0, vmax=np.nanmax(rotated_obs_I))
-        ax[1].quiver(x_sampled_model, y_sampled_model, u_segment_model, v_segment_model, color='cyan', pivot='middle',
+        ax[1].quiver(x_sampled_model, y_sampled_model, u_segment_model, v_segment_model, color='white', 
                      scale=50, headlength=0, headaxislength=0, headwidth=0)
         ax[1].set_xticks([0, model_I.shape[0]//2, model_I.shape[0]-1])
         ax[1].set_xticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
@@ -607,103 +499,138 @@ def save_image_to_fits(model_image, beam_info, coords, fname, stokes=['I', 'Q', 
         FITS_name = f'{fname}_conv_{stoke}.fits'
         os.system('rm -rf '+FITS_name)
         cim.writeFits(FITS_name, coord=coords, stokes=stoke,)
-"""
-Initialize observation (sed)
-"""
 
-freqs_HG19 = np.array([d["Freq"] for d in HG_19_data])
-S_B_HG19   = np.array([d["S_B"] for d in HG_19_data])
-sigma_HG19 = np.array([d["sigma"] for d in HG_19_data])
-freqs_this_work = np.array([d["Freq"] for d in this_work_data])
-S_B_this_work   = np.array([d["S_B"] for d in this_work_data])
-sigma_this_work = np.array([d["sigma"] for d in this_work_data])
 
-def plot_sed_diff_params(simulation, dir, fname):
-    sed = simulation.spectrum
-    lam = sed[:, 0]
-    nu = (1e-2*cc)*1e-9/(1e-6*lam) # GHz
-    fnu = sed[:, 1]*1e26/(140**2) # mJy
+a_list = [10, 50, 100, 200, 400, 800, 1600, 3200, 6400, 12800]
 
-    fig, ax = plt.subplots(1, 2, figsize=(12, 10), sharey=True)
+# for ain in a_list:
+#     incl = 45
+#     ain = ain * 1e-3  # Convert um to mm
+#     mdot= 5e-5
+#     rd = 35
+#     Q = 0.5
 
-    ax[0].scatter(freqs_HG19, S_B_HG19, marker='x', 
-                color='blue', s=30, label='Hernández-Gómez et al. 2019')
-    ax[0].scatter(freqs_this_work, S_B_this_work, marker='o', 
-                color='olive', s=100, label='This Work')
-    ax[0].plot(nu, fnu, 'o-r', label=f'model', 
-                    markersize=8)
-    ax[0].set_xscale('log'); ax[0].set_xlim((5e-1, 1e3))
-    ax[0].set_yscale('log'); ax[0].set_ylim((1e-2, 2e5))
-    ax[0].set_xlabel('Frequency (GHz)', fontsize=14)
-    ax[0].set_ylabel('Flux Density (mJy)', fontsize=14)
-    ax[0].set_title('SED', fontsize=16)
-    ax[0].grid(True, which='major', linestyle='--', linewidth=0.5)
-    ax[0].legend()
+#     setup_model(ain, None, mdot, rd, Q, align=True)
+#     simulation = Simulation(save_out=True, save_npz=False)
+#     simulate_mutual_parms = {
+#         "incl"      : incl,
+#         "npix"      : 500,
+#         "sizeau"    : crop_sizeau,
+#         "posang"    : 0,
+#         "phi"       : 0,
+#         "dir"       : f'/run/media/hyp0515/storage/ext_fig_3/amax_{ain}/',
+#     }
+#     simulation.generate_continuum(
+#         scat=True,
+#         stokes=True,
+#         read_lambda=obs_wav*1e-3,
+#         load_simulation=False,
+#         fname=f'conti',
+#         **simulate_mutual_parms
+#     )
 
-    ax[1].scatter(freqs_HG19, S_B_HG19, marker='x', 
-                color='blue', s=30, label='Hernández-Gómez et al. 2019')
-    ax[1].scatter(freqs_this_work, S_B_this_work, marker='o', 
-                color='olive', s=100, label='This Work')
-    ax[1].plot(nu, fnu, 'o-r', label=f'model', 
-                    markersize=8)
-    ax[1].set_xscale('log'); ax[1].set_xlim((1e+1, 5e2))
-    ax[1].set_yscale('log'); ax[1].set_ylim((1e-2, 2e5))
-    ax[1].set_xlabel('Frequency (GHz)', fontsize=14)
-    ax[1].set_ylabel('Flux Density (mJy)', fontsize=14)
-    ax[1].set_title('SED (Zoomed)', fontsize=16)
-    ax[1].grid(True, which='major', linestyle='--', linewidth=0.5)
-    ax[1].legend()
+def b_T(wav, beam_info, data_jybeam):
+    return 1.36*(wav*1e-1*1e-3)**2*data_jybeam*1e3 / (beam_info[0] * beam_info[1])
 
-    plt.tight_layout()
-    plt.savefig(f'{dir}{fname}.pdf', transparent=True)
-    plt.close()
+Tb_max = [300, 500, 150, 300]
+
+fig, axes = plt.subplots(len(a_list)+1, 4, figsize=(4*4, 4*(len(a_list)+1)), constrained_layout=True)
+# plt.subplots_adjust(wspace=0.0, hspace=0.0, top=0.9, bottom=0.1, left=0.1, right=0.9)
+
+for i, lam in enumerate(obs_wav):
+    ax = axes[0, :]
+    '''
+    Plot observed continuum and polarization data
+    '''
+    rotated_obs_I = rotate_image(obs_data_I[i], -90) # Rotate the image to match the model orientation (pa=0)
+    rotated_obs_I_bT = b_T(lam, beam_info[i, :], rotated_obs_I)
+    if obs_data_PA[i] is None or obs_data_Per[i] is None:
+        ax[i].imshow(rotated_obs_I_bT, origin='lower', cmap="magma", vmin=0, vmax=Tb_max[i], 
+                extent=[0, rotated_obs_I.shape[1], 0, rotated_obs_I.shape[0]])
+        fig.colorbar(ax[i].images[0], ax=ax[i], orientation='horizontal', location='top', label='Brightness Temperature (K)',
+                    pad=0.00, shrink=1)
+    else:
+        rotated_obs_PA = rotate_image(obs_data_PA[i], -90)
+        rotated_obs_Per = rotate_image(obs_data_Per[i], -90)
+        if i == 0: # Band 6
+            interp_rotated_obs_I = ndimage.zoom(rotated_obs_I, zoom=rotated_obs_PA.shape[0] / rotated_obs_I.shape[0])
+            mask_obs = interp_rotated_obs_I > 10 * obs_rms[i]
+        else:
+            mask_obs = rotated_obs_I > 10 * obs_rms[i]
+        rotated_obs_PA[~mask_obs] = np.nan
+        rotated_obs_Per[~mask_obs] = np.nan
+        
+        
+        x_sampled_obs, y_sampled_obs, u_segment_obs, v_segment_obs = b_segment(rotated_obs_PA, rotated_obs_Per, step=[9, None, 10, 2][i])
+        
+        ax[i].quiver(x_sampled_obs, y_sampled_obs, u_segment_obs, v_segment_obs, color='cyan', 
+                    scale=50, headlength=0, headaxislength=0, headwidth=0)
+        ax[i].imshow(rotated_obs_I_bT, origin='lower', cmap="magma", vmin=0, vmax=Tb_max[i], 
+                extent=[0, rotated_obs_PA.shape[1], 0, rotated_obs_PA.shape[0]])
+        fig.colorbar(ax[i].images[0], ax=ax[i], orientation='horizontal', location='top', label='Brightness Temperature (K)',
+                    pad=0.00, shrink=1)
+        # ax[i].text(0.05, 0.95, f'{lam*1e-3:.1f} mm', transform=ax[i].transAxes, fontsize=12, color='white', va='top')
+        # ax[i].set_xticks([0, rotated_obs_I.shape[0]//2, rotated_obs_I.shape[0]-1])
+        # ax[0].set_xticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
+        # ax[0].set_xlabel('AU')
+        # ax[0].set_yticks([0, rotated_obs_I.shape[1]//2, rotated_obs_I.shape[1]-1])
+        # ax[0].set_yticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
+        # ax[0].set_ylabel('AU')
+    ax[i].text(0.05, 0.95, r"$\lambda$="+f'{lam*1e-3:.1f}mm', transform=ax[i].transAxes, fontsize=14, color='white', va='top')
+    ax[i].set_xticks([])
+    ax[i].set_yticks([])
+
+for j, ain in enumerate(np.array(a_list)*1e-3):
+        
+    simulation = Simulation(save_out=True, save_npz=False)
+    simulate_mutual_parms = {
+        "incl"      : 45,
+        "npix"      : 500,
+        "sizeau"    : crop_sizeau,
+        "posang"    : 0,
+        "phi"       : 0,
+        "dir"       : f'/run/media/hyp0515/storage/ext_fig_3/amax_{ain}/',
+    }
+    simulation.generate_continuum(
+        scat=True,
+        stokes=True,
+        read_lambda=obs_wav*1e-3,
+        load_simulation=True,
+        fname=f'conti',
+        **simulate_mutual_parms
+    )
+    model_img = simulation.conti
     
-"""
-Generate synthetic models and plot them
-"""
-# ain_list = [1e0, 7e-1, 5e-1, 3e-1, 1e-1, 5e-2] # maximum grain sizes in mm
-# aout_list = [1e0, 7e-1, 5e-1, 3e-1, 1e-1, 5e-2] # maximum grain sizes in mm
-# Mdot_list = [5e-4, 1e-5, 5e-5, 1e-6] # accretion rates
-# Q_list    = [0.7,  0.5,  0.3] # Toomre Q parameters 
+    for i, lam in enumerate(obs_wav):
+        ax = axes[j+1, :]
+        conv_image_I   = model_img.imConv(dpc=distance, fwhm=beam_info[i, :-1], pa=-(beam_info[i, -1]+90)) # Convolve with beam
+        
+        npix = len(model_img.x)
+        pixel_area = (crop_sizeau/npix/140)**2
+        beam_area_I = beam_info[i, 0]*beam_info[i, 0]*np.pi/(4*np.log(2))
+        conv_image_I.imageJyppix *= beam_area_I/pixel_area/(distance**2) # Convert to Jy/pixel
+        model_I = conv_image_I.imageJyppix[:, :, 0, i].T
+        mask_model = model_I > 10 * obs_rms[i]
 
-# for ain in ain_list:
-#     for aout in aout_list:
-#         for mdot in Mdot_list:
-#             for Q in Q_list:
-incl = 45
-ain = 1.6
-amid = 0.3
-aout = 0.3
-mdot= 5e-5
-rd = 35
-Q = 0.5
+        conv_image_plr = model_img.imConv(dpc=distance, fwhm=beam_plr_info[i, :-1], pa=-(beam_plr_info[i, -1]+90)) 
+        beam_area_plr = beam_plr_info[i, 0]*beam_plr_info[i, 0]*np.pi/(4*np.log(2))
+        conv_image_plr.imageJyppix *= beam_area_plr/pixel_area/(distance**2) # Convert to Jy/pixel
+        model_Q = conv_image_plr.imageJyppix[:, :, 1, i].T
+        model_U = conv_image_plr.imageJyppix[:, :, 2, i].T
+        model_PA = 0.5 * np.arctan2(-model_U, -model_Q)
+        model_Per = np.sqrt(model_Q**2 + model_U**2) / model_I
+        model_PA[~mask_model] = np.nan
+        model_Per[~mask_model] = np.nan
+        x_sampled_model, y_sampled_model, u_segment_model, v_segment_model = b_segment(model_PA, model_Per, step=15)
+        model_I_bT = b_T(lam, beam_info[i, :], model_I)
+        ax[i].imshow(model_I_bT, origin='lower', cmap="magma", vmin=0, vmax=Tb_max[i])
+        ax[i].quiver(x_sampled_model, y_sampled_model, u_segment_model, v_segment_model, color='cyan', pivot='middle',
+                     scale=50, headlength=0, headaxislength=0, headwidth=0)
+        # ax[i].text(0.05, 0.95, r"$\lambda$="+f'{lam*1e-3:.1f}mm', transform=ax[i].transAxes, fontsize=12, color='white', va='top')
+        ax[i].text(0.55, 0.95, r"$a_{max}=$"+f'{ain:.2f} mm', transform=ax[i].transAxes, fontsize=14, color='white', va='top')
+        ax[i].set_xticks([])
+        ax[i].set_yticks([])
 
-setup_model(ain, amid, aout, mdot, rd, Q, align=True)
-simulation = Simulation(save_out=True, save_npz=False)
-simulate_mutual_parms = {
-    "incl"      : incl,
-    "npix"      : 500,
-    "sizeau"    : crop_sizeau,
-    "posang"    : 0,
-    "phi"       : 0,
-    "dir"       : f'/run/media/hyp0515/storage/layered_disk/ain_{ain}_amid_{amid}_aout_{aout}_Mdot_{mdot}_Q_{Q}_incl_{incl}_rd_{rd}_threelayer_rad/',
-}
-simulation.generate_continuum(
-    scat=True,
-    stokes=True,
-    read_lambda=obs_wav*1e-3,
-    load_simulation=False,
-    fname=f'conti',
-    **simulate_mutual_parms
-)
-simulation.generate_sed(
-    scat=True,
-    read_lambda=obs_wav*1e-3,
-    load_simulation=False,
-    fname='sed',
-    **simulate_mutual_parms
-)
-plot_sed_diff_params(simulation, dir=simulate_mutual_parms["dir"], fname='sed') 
-plot_conti_diff_params(simulation, obs_data_I, dir=simulate_mutual_parms["dir"], fname='conti')
-plot_plr_diff_params(simulation, obs=(obs_data_I, obs_data_PA, obs_data_Per),
-                    dir=simulate_mutual_parms["dir"], fname='plr')
+# plt.tight_layout()
+plt.savefig('./ext_fig_3.pdf', transparent=True)
+# plt.show()

@@ -1099,6 +1099,7 @@ class Model:
             a_max=0.1, 
             q=-3.5,
             composition='X22',
+            fnames = ['temp_regime_1', 'temp_regime_2', 'temp_regime_3', 'temp_regime_4'],
             table_cache='./kappa/',
             inputstyle=20
         ):
@@ -1114,7 +1115,8 @@ class Model:
         if composition.lower() == 'x22':
 
             material_frac = ['h2o-w 0.2', 'c-org 0.3966', 'fes 0.0743', 'astrosil 0.3291']
-            fnames = ['temp_regime_1', 'temp_regime_2', 'temp_regime_3', 'temp_regime_4']
+            if fnames is None:
+                fnames = ['temp_regime_1', 'temp_regime_2', 'temp_regime_3', 'temp_regime_4']
             for idx in range(len(material_frac)):
                 p = optool.particle(prompt + f'-c {' '.join(material_frac[(idx):])}',
                                     cache=f'./{table_cache}/{fnames[idx]}/',
@@ -1817,8 +1819,8 @@ class Setup:
         lam = np.logspace(np.log10(5e-1), np.log10(5e4), nlam, endpoint=True)  # Wavelengths in microns
         ang = np.linspace(0, 90, nang, endpoint=True)  # Angles in degrees
 
-        k_orth = 1 + 0.1*(1-np.cos(np.radians(ang))**2)  # Orthogonal component of kappa
-        k_para = 1 - 0.1*(1-np.cos(np.radians(ang))**2)  # Parallel component of kappa
+        k_orth = 1 + 0.2*(1-np.cos(np.radians(ang))**2)  # Orthogonal component of kappa
+        k_para = 1 - 0.2*(1-np.cos(np.radians(ang))**2)  # Parallel component of kappa
 
         # k_orth = np.ones(nang)  # Orthogonal component of kappa
         # k_para = 1 - np.sin(np.deg2rad(ang))  # Parallel component of kappa
