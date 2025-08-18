@@ -1,6 +1,7 @@
 */*.inp
 */*.out
 */*.dat
+*/*.fits
 */simulation/*/npzfile/
 */simulation/*/outfile/
 */kappa/
