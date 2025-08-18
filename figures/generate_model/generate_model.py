@@ -1,7 +1,7 @@
 import numpy as np
 from radmc3dPy.analyze import * 
 import sys
-sys.path.append('..')
+sys.path.append('../..')
 from radmc.setup import *
 from radmc.simulate import Simulation
 

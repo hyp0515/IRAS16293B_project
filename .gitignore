@@ -1,8 +1,8 @@
-*/*.inp
-*/*.out
-*/*.dat
-*/*.fits
-*/simulation/*/npzfile/
-*/simulation/*/outfile/
-*/kappa/
+figures/*/*.inp
+figures/*/*.out
+figures/*/*.dat
+figures/*/*.fits
+figures/*/simulation/*/npzfile/
+figures/*/simulation/*/outfile/
+figures/*/kappa/
 .vscode/settings.json
