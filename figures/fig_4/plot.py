@@ -40,6 +40,8 @@ def setup_model(amax_inner, amax_middle, amax_outer, mdot, rd, Toomre_Q, align=T
         ntheta=200,
         nphi=20,
     )
+
+    # inner layer
     model = Model()
     opacity_dir_inner = ['temp_regime_1_inner', 'temp_regime_2_inner', 'temp_regime_3_inner', 'temp_regime_4_inner']
     model.generate_opacity_optool(a_max=amax_inner, composition='X22', 
@@ -63,6 +65,7 @@ def setup_model(amax_inner, amax_middle, amax_outer, mdot, rd, Toomre_Q, align=T
     )
     rho = model.rho_dust
 
+    # middle layer
     middle_model = Model()
     opacity_dir_mid = ['temp_regime_1_middle', 'temp_regime_2_middle', 'temp_regime_3_middle', 'temp_regime_4_middle']
     middle_model.generate_opacity_optool(a_max=amax_middle, composition='X22', 
@@ -85,7 +88,7 @@ def setup_model(amax_inner, amax_middle, amax_outer, mdot, rd, Toomre_Q, align=T
     )
     rho[:, :, :, 1] = middle_model.rho_dust[:, :, :, 1]
 
-
+    # outer layer
     outer_model = Model()
     opacity_dir_outer = ['temp_regime_1_outer', 'temp_regime_2_outer', 'temp_regime_3_outer', 'temp_regime_4_outer']
     outer_model.generate_opacity_optool(a_max=amax_outer, composition='X22', 
@@ -107,8 +110,6 @@ def setup_model(amax_inner, amax_middle, amax_outer, mdot, rd, Toomre_Q, align=T
         Q=Toomre_Q,
     )
     rho[:, :, :, 0] = outer_model.rho_dust[:, :, :, 0]
-
-
 
     model.rho_dust = rho
 
@@ -138,7 +139,6 @@ def setup_model(amax_inner, amax_middle, amax_outer, mdot, rd, Toomre_Q, align=T
     setup.write_dust_opac(dust_type=opacity_dir_outer[:1]+opacity_dir_inner[1:], inputstyle=inputstyle_index, grain_align=align)
     setup.write_density_file()
     setup.write_temperature_file()
-    # os.system('radmc3d mctherm')
     setup.get_dustalignmentcontrol(alpha=1/(10*au*au), 
                                     hourglass=True, 
                                     uniform_z=True, 
@@ -218,9 +218,10 @@ def get_flux_density(image_array, rms, beam):
 """
 Initialize observation (continuum and polarization)
 """
-distance = 140
+distance = 140 # pc
+crop_sizeau = 150 # AU
 
-obs_wav = np.array([
+obs_wav = np.array([ # in microns
     1300, 
     3000, 
     7000, 
@@ -249,7 +250,7 @@ fname_band6_stokeU  = '~/project_data/IRAS16293/image_FITS/ALMA_Band6_Pol/c2d_10
 fname_qband_stokeU  = '~/project_data/IRAS16293/image_FITS/JVLA_Qband_Pol/iras16293_Qband.rob0.U.regrid.fits'
 fname_kuband_stokeU = '~/project_data/IRAS16293/image_FITS/JVLA_Kuband_Pol/rob0/I16293_Kuband_A.rob0.U.image.tt0.pbcor.subim.fits'
 
-crop_sizeau = 150
+
 
 # # Reference coords (Ku Band)
 ra_ref = '16:32:22.6090'
@@ -290,8 +291,10 @@ obs_stokeU_fnames = [
     fname_kuband_stokeU
 ]
 
+
 obs_data_I_coords = []
 obs_data_plr_coords = []
+obs_data_wcs = []
 obs_data_I = []
 obs_data_PA  = []
 obs_data_Per = []
@@ -335,87 +338,20 @@ for i, (fname_I, fname_Q, fname_U) in enumerate(zip(obs_stokeI_fnames, obs_stoke
                 coords_shifted_I = coord_ref.apply_space_motion(Time(header_I['DATE-OBS'], format='isot', scale='utc'))
             data_crop_I, wcs_crop_I = crop_around_coord(data_I, wcs_I, coords_shifted_I, crop_sizeau, au_per_pix_plr)
         
-        PA = 0.5 * np.arctan2(-data_crop_U, -data_crop_Q)
+        PA = 0.5 * np.arctan2(data_crop_U, data_crop_Q)
         Per = np.sqrt(data_crop_Q**2 + data_crop_U**2) / data_crop_I
 
         obs_data_PA.append(PA)
         obs_data_Per.append(Per)
         obs_data_plr_coords.append(coords_shifted_plr.to_string(style='hmsdms'))
+        obs_data_wcs.append(wcs_crop_Q)
     else:
         obs_data_PA.append(None)
         obs_data_Per.append(None)
         obs_data_plr_coords.append(None)
+        obs_data_wcs.append(wcs_crop_I)
 
-
-def plot_conti_diff_params(simulation, obs, dir, fname):
-    model_img = simulation.conti
-
-    fig, axes = plt.subplots(4, len(obs_wav), figsize=(4*len(obs_wav), 4*len(obs_wav)))
-    for i, lam in enumerate(obs_wav):
-        
-        conv_image = model_img.imConv(dpc=distance, fwhm=beam_info[i, :-1], pa=-(beam_info[i, -1]+90)) # Convolve with beam
-        npix = len(model_img.x)
-        pixel_area = (crop_sizeau/npix/140)**2
-        beam_area = beam_info[i, 0]*beam_info[i, 1]*np.pi/(4*np.log(2))
-        conv_image.imageJyppix *= beam_area/pixel_area/(distance**2) # Convert to Jy/pixel
-        model = conv_image.imageJyppix[:, :, 0, i].T
-        obs = obs_data_I[i]
-
-        rotated_obs = rotate_image(obs, -90) # Rotate the image to match the model orientation (pa=0)
-        radial_obs_major, radial_obs_minor, center = radial_intensity(rotated_obs, center=None, width=5)
-        ax = axes[:, i]
-        ax[0].imshow(rotated_obs, origin='lower', cmap="magma", vmin=0, vmax=np.nanmax(rotated_obs))
-        ax[0].text(0.05, 0.95, f'{lam*1e-3:.1f} mm', transform=ax[0].transAxes, fontsize=12, color='white', va='top')
-        ax[0].hlines(center, xmin=0, xmax=rotated_obs.shape[0]-1, color='violet', linestyle='--', linewidth=1)
-        ax[0].vlines(center, ymin=0, ymax=rotated_obs.shape[1]-1, color='dodgerblue', linestyle='--', linewidth=1)
-        ax[0].set_xticks([0, rotated_obs.shape[0]//2, rotated_obs.shape[0]-1])
-        ax[0].set_xticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
-        ax[0].set_xlabel('AU')
-        ax[0].set_yticks([0, rotated_obs.shape[1]//2, rotated_obs.shape[1]-1])
-        ax[0].set_yticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
-        ax[0].set_ylabel('AU')
-
-        radial_model_major, radial_model_minor, center = radial_intensity(model, center=None, width=5)
-        
-        ax[1].imshow(model, origin='lower', cmap="magma", vmin=0, vmax=np.nanmax(rotated_obs))
-        ax[1].hlines(center, xmin=0, xmax=model.shape[0]-1, color='violet', linestyle='-', linewidth=1)
-        ax[1].vlines(center, ymin=0, ymax=model.shape[1]-1, color='dodgerblue', linestyle='-', linewidth=1)
-        ax[1].set_xticks([0, model.shape[0]//2, model.shape[0]-1])
-        ax[1].set_xticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
-        ax[1].set_xlabel('AU')
-        ax[1].set_yticks([0, model.shape[1]//2, model.shape[1]-1])
-        ax[1].set_yticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
-        ax[1].set_ylabel('AU')
-
-        interp_obs = ndimage.zoom(rotated_obs, zoom=model.shape[0] / rotated_obs.shape[0])
-        radial_obs_major, radial_obs_minor, center = radial_intensity(interp_obs, center=None, width=5)
-
-        residual = interp_obs - model
-
-        ax[2].imshow(residual, origin='lower', cmap="seismic", vmin=-(np.nanmax(rotated_obs)/2), vmax=np.nanmax(rotated_obs)/2)
-        ax[2].set_xticks([0, residual.shape[0]//2, residual.shape[0]-1])
-        ax[2].set_xticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
-        ax[2].set_xlabel('AU')
-        ax[2].set_yticks([0, residual.shape[1]//2, residual.shape[1]-1])
-        ax[2].set_yticklabels([-(crop_sizeau//2), 0, (crop_sizeau//2)])
-        ax[2].set_ylabel('AU')
-
-        ax[3].plot(np.linspace(-100, 100, num=radial_obs_major.size, endpoint=True), radial_obs_major, color='violet', linestyle='--')
-        ax[3].plot(np.linspace(-100, 100, num=radial_obs_minor.size, endpoint=True), radial_obs_minor, color='dodgerblue', linestyle='--')
-        ax[3].plot(np.linspace(-100, 100, num=radial_model_major.size, endpoint=True), radial_model_major, color='violet')
-        ax[3].plot(np.linspace(-100, 100, num=radial_model_minor.size, endpoint=True), radial_model_minor, color='dodgerblue')
-        ax[3].vlines(0, ymin=0, ymax=max(np.nanmax(radial_obs_major), np.nanmax(radial_model_major)), color='k', linestyle='--', linewidth=1)
-        ax[3].text(0.05, 0.95, f'{lam*1e-3:.1f} mm', transform=ax[3].transAxes, fontsize=12, color='k', va='top')
-        # ax[3].set_title(f'Radial profile at {lam} $\mu$m')
-        ax[3].set_xlabel('AU')
-        ax[3].set_ylabel('Intensity (Jy/pixel)')
-        ax[3].set_xlim((-(crop_sizeau//2), crop_sizeau//2))
-        ax[3].set_ylim(bottom=0)
-    plt.tight_layout()
-    plt.savefig(f'{dir}{fname}.pdf', transparent=True)
-    plt.close()
-
-def b_segment(PA, Per, step=8):
+def b_segment(PA, Per, step=8): # b-field segment
     y, x = np.mgrid[0:PA.shape[0], 0:PA.shape[1]]
     x_sampled = x[::step, ::step]
     y_sampled = y[::step, ::step]
@@ -425,224 +361,11 @@ def b_segment(PA, Per, step=8):
     v_segment = (intensity_sampled/0.02) * np.sin(angle_sampled)
     return x_sampled, y_sampled, u_segment, v_segment
 
-def b_T(wav, beam_info, data_jybeam):
-    return 1.36*(wav*1e-1*1e-3)**2*data_jybeam*1e3 / (beam_info[0] * beam_info[1])
-
-def plot_plr_diff_params(simulation, obs, dir, fname):
-    
-    obs_I, obs_PA, obs_Per = obs
-    model_img = simulation.conti
-
-    fig, axes = plt.subplots(2, len(obs_wav), figsize=(4*len(obs_wav), 2*len(obs_wav)), constrained_layout=True)
-
-    for i, lam in enumerate(obs_wav):
-        ax = axes[:, i]
-    
-        '''
-        Plot observed continuum and polarization data
-        '''
-        rotated_obs_I = rotate_image(obs_I[i], -90) # Rotate the image to match the model orientation (pa=0)
-        rotated_obs_I_bT = b_T(obs_wav[i], beam_info[i, :], rotated_obs_I)
-
-        if i != 1:
-            rotated_obs_PA = rotate_image(obs_PA[i], -90)
-            rotated_obs_Per = rotate_image(obs_Per[i], -90)
-            interp_rotated_obs_I = ndimage.zoom(rotated_obs_I, zoom=rotated_obs_PA.shape[0] / rotated_obs_I.shape[0])
-            mask_obs = interp_rotated_obs_I > [25, None, 25, 5][i] * obs_rms[i]
-            rotated_obs_PA[~mask_obs] = np.nan
-            rotated_obs_Per[~mask_obs] = np.nan
-            x_sampled_obs, y_sampled_obs, u_segment_obs, v_segment_obs = b_segment(rotated_obs_PA, rotated_obs_Per, step=[10, None, 12, 4][i])
-
-            ax[0].quiver(x_sampled_obs, y_sampled_obs, u_segment_obs, v_segment_obs, color=polar_color, 
-                        scale=30, headlength=0, headaxislength=0, headwidth=0, pivot='middle', width=0.01)
-            
-            # plot quiver key
-            ax[0].quiver(0.97, 0.18, 2.5, 0, color=polar_color, pivot='tip', transform=ax[0].transAxes,
-                        scale=30, headlength=0, headaxislength=0, headwidth=0, width=0.01)
-            ax[0].text(0.97, 0.26, r'5$\%$', transform=ax[0].transAxes, fontweight='bold', fontsize=16, color=polar_color, va='top', ha='right')
-
-            # plot beam ellipse for polarization
-            beam_major_arcsec, beam_minor_arcsec, beam_pa = beam_plr_info[i, :]
-            if i == 0:
-                beam = Ellipse((0.18, 0.15), transform=ax[0].transAxes,
-                                width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
-                                angle=beam_pa+90, edgecolor=polar_color, facecolor='None', lw=5)
-                ax[0].add_patch(beam)
-
-        # plot observed continuum image
-        ax[0].imshow(rotated_obs_I_bT, origin='lower', cmap=conti_cmap, vmin=0, vmax=Tb_max[i], 
-                extent=[0, rotated_obs_PA.shape[1], 0, rotated_obs_PA.shape[0]])
-        # plot colorbar
-        cbar = fig.colorbar(ax[0].images[0], ax=ax[0], orientation='horizontal', location='top',
-                        pad=0.00, shrink=0.95)
-        cbar.set_label(r'$T_b$ (K)', fontsize=16)
-        cbar.ax.tick_params(labelsize=14)
-
-        # plot scale bar
-        ax[0].plot([0.8-50/crop_sizeau/2, 0.8+50/crop_sizeau/2], [0.05, 0.05], transform=ax[0].transAxes,  # Scale bar in Axes coordinates
-                    color=text_color, linewidth=4)
-        ax[0].text(0.8, 0.13, '50AU', transform=ax[0].transAxes, fontweight='bold', fontsize=16, color=text_color, va='top', ha='left')
-
-        # plot beam ellipse for stokes I
-        beam_major_arcsec, beam_minor_arcsec, beam_pa = beam_info[i, :]
-
-        if i == 2:
-            beam = Ellipse((0.18, 0.20), transform=ax[0].transAxes,
-                            width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
-                            angle=beam_pa+90, edgecolor=polar_color, facecolor=text_color, lw=5)
-        elif i == 3:
-            beam = Ellipse((0.18, 0.15), transform=ax[0].transAxes,
-                            width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
-                            angle=beam_pa+90, edgecolor=polar_color, facecolor=text_color, lw=5)
-        else:
-            beam = Ellipse((0.18, 0.15), transform=ax[0].transAxes,
-                            width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
-                            angle=beam_pa+90, edgecolor=text_color, facecolor=text_color, lw=5)
-        ax[0].add_patch(beam)
-
-        ax[0].text(0.05, 0.95, obs_title[i], fontweight='bold', transform=ax[0].transAxes, fontsize=16, color=text_color, va='top')
-        ax[0].set_xticks([])
-        ax[0].set_yticks([])
-            
-        '''
-        Plot synthetic continuum and polarization
-        '''
-        save_image_to_fits(model_img, beam_info[i, :], obs_data_I_coords[i], f'{dir}model_{lam}um', stokes=['I'])
-        model_I, header_I, wcs_I = get_info(f'{dir}model_{lam}um_conv_I.fits')
-        model_I = model_I[i, :, :]
-        model_I_bT = b_T(obs_wav[i], beam_info[i, :], model_I)
-        
-        if i != 1:
-            save_image_to_fits(model_img, beam_plr_info[i, :], obs_data_plr_coords[i], f'{dir}model_{lam}um', stokes=['Q', 'U'])
-            model_Q, header_Q, wcs_Q = get_info(f'{dir}model_{lam}um_conv_Q.fits')
-            model_U, header_U, wcs_U = get_info(f'{dir}model_{lam}um_conv_U.fits')
-            model_Q = model_Q[i, :, :]
-            model_U = model_U[i, :, :]
-            model_PA = 0.5 * np.arctan2(-model_U, -model_Q)
-            model_Per = np.sqrt(model_Q**2 + model_U**2) / model_I
-            mask_model = model_I > [25, None, 25, 5][i] * obs_rms[i]
-            model_PA[~mask_model] = np.nan
-            model_Per[~mask_model] = np.nan
-            x_sampled_model, y_sampled_model, u_segment_model, v_segment_model = b_segment(model_PA, model_Per, step=30)
-
-            # plot model polarization segments
-            ax[1].quiver(x_sampled_model, y_sampled_model, u_segment_model, v_segment_model, color=polar_color, pivot='middle',
-                            scale=30, headlength=0, headaxislength=0, headwidth=0, width=0.01)
-
-            # plot quiver key
-            ax[1].quiver(0.97, 0.18, 2.5, 0, color=polar_color, pivot='tip', transform=ax[1].transAxes,
-                        scale=30, headlength=0, headaxislength=0, headwidth=0, width=0.01)
-            ax[1].text(0.97, 0.26, r'5$\%$', transform=ax[1].transAxes, fontweight='bold', fontsize=16, color=polar_color, va='top', ha='right')
-
-            beam_major_arcsec, beam_minor_arcsec, beam_pa = beam_plr_info[i, :]
-            if i == 2:
-                beam = Ellipse((0.18, 0.20), transform=ax[1].transAxes,
-                                width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
-                                angle=beam_pa+90, edgecolor=polar_color, facecolor=text_color, lw=5)
-            elif i == 3:
-                beam = Ellipse((0.18, 0.15), transform=ax[1].transAxes,
-                                width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
-                                angle=beam_pa+90, edgecolor=polar_color, facecolor=text_color, lw=5)
-            else:
-                beam = Ellipse((0.18, 0.15), transform=ax[1].transAxes,
-                                width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
-                                angle=beam_pa+90, edgecolor=polar_color, facecolor='None', lw=5)
-            ax[1].add_patch(beam)
-
-        ax[1].imshow(model_I_bT, origin='lower', cmap=conti_cmap, vmin=0, vmax=Tb_max[i])
-
-        if i == 0 or i == 1:
-            # plot beam ellipse
-            beam_major_arcsec, beam_minor_arcsec, beam_pa = beam_info[i, :]
-            beam = Ellipse((0.18, 0.15), transform=ax[1].transAxes,
-                            width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
-                            angle=beam_pa+90, edgecolor=text_color, facecolor=text_color, lw=5)
-            ax[1].add_patch(beam)
-
-
-        # plot scale bar
-        ax[1].plot([0.8-50/crop_sizeau/2, 0.8+50/crop_sizeau/2], 
-                    [0.05, 0.05], transform=ax[1].transAxes,  # Scale bar in Axes coordinates
-                    color=text_color, linewidth=4)
-        ax[1].text(0.8, 0.13, '50AU', transform=ax[1].transAxes, fontweight='bold', fontsize=16, color=text_color, va='top', ha='left')
-
-        ax[1].text(0.45, 0.95, 'Fiducial Model', fontweight='bold', transform=ax[1].transAxes, fontsize=16, color=text_color, va='top')
-        ax[1].set_xticks([])
-        ax[1].set_yticks([])
-
-
-        # conv_image_I   = model_img.imConv(dpc=distance, fwhm=beam_info[i, :-1], pa=-(beam_info[i, -1]+90)) # Convolve with beam
-        
-        # npix = len(model_img.x)
-        # pixel_area = (crop_sizeau/npix/140)**2
-        # beam_area_I = beam_info[i, 0]*beam_info[i, 1]*np.pi/(4*np.log(2))
-        # conv_image_I.imageJyppix *= beam_area_I/pixel_area/(distance**2) # Convert to Jy/pixel
-        # model_I = conv_image_I.imageJyppix[:, :, 0, i].T
-        # model_I_bT = b_T(obs_wav[i], beam_info[i, :], model_I)
-        # if i != 1:
-        #     conv_image_plr = model_img.imConv(dpc=distance, fwhm=beam_plr_info[i, :-1], pa=-(beam_plr_info[i, -1]+90)) 
-        #     beam_area_plr = beam_plr_info[i, 0]*beam_plr_info[i, 1]*np.pi/(4*np.log(2))
-        #     conv_image_plr.imageJyppix *= beam_area_plr/pixel_area/(distance**2) # Convert to Jy/pixel
-        #     model_Q = conv_image_plr.imageJyppix[:, :, 1, i].T
-        #     model_U = conv_image_plr.imageJyppix[:, :, 2, i].T
-        #     model_PA = 0.5 * np.arctan2(-model_U, -model_Q)
-        #     model_Per = np.sqrt(model_Q**2 + model_U**2) / model_I
-        #     mask_model = model_I > [25, None, 25, 5][i] * obs_rms[i]
-        #     model_PA[~mask_model] = np.nan
-        #     model_Per[~mask_model] = np.nan
-        #     x_sampled_model, y_sampled_model, u_segment_model, v_segment_model = b_segment(model_PA, model_Per, step=30)
-            
-
-        #     # plot model polarization segments
-        #     ax[1].quiver(x_sampled_model, y_sampled_model, u_segment_model, v_segment_model, color=polar_color, pivot='middle',
-        #                     scale=30, headlength=0, headaxislength=0, headwidth=0, width=0.01)
-
-        #     # plot quiver key
-        #     ax[1].quiver(0.97, 0.18, 2.5, 0, color=polar_color, pivot='tip', transform=ax[1].transAxes,
-        #                 scale=30, headlength=0, headaxislength=0, headwidth=0, width=0.01)
-        #     ax[1].text(0.97, 0.26, r'5$\%$', transform=ax[1].transAxes, fontweight='bold', fontsize=16, color=polar_color, va='top', ha='right')
-
-        #     beam_major_arcsec, beam_minor_arcsec, beam_pa = beam_plr_info[i, :]
-        #     if i == 2:
-        #         beam = Ellipse((0.18, 0.20), transform=ax[1].transAxes,
-        #                         width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
-        #                         angle=beam_pa+90, edgecolor=polar_color, facecolor=text_color, lw=5)
-        #     elif i == 3:
-        #         beam = Ellipse((0.18, 0.15), transform=ax[1].transAxes,
-        #                         width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
-        #                         angle=beam_pa+90, edgecolor=polar_color, facecolor=text_color, lw=5)
-        #     else:
-        #         beam = Ellipse((0.18, 0.15), transform=ax[1].transAxes,
-        #                         width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
-        #                         angle=beam_pa+90, edgecolor=polar_color, facecolor='None', lw=5)
-        #     ax[1].add_patch(beam)
-
-        # # plot model image
-        # ax[1].imshow(model_I_bT, origin='lower', cmap=conti_cmap, vmin=0, vmax=Tb_max[i])
-
-        # if i == 0 or i == 1:
-        #     # plot beam ellipse
-        #     beam_major_arcsec, beam_minor_arcsec, beam_pa = beam_info[i, :]
-        #     beam = Ellipse((0.18, 0.15), transform=ax[1].transAxes,
-        #                     width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
-        #                     angle=beam_pa+90, edgecolor=text_color, facecolor=text_color, lw=5)
-        #     ax[1].add_patch(beam)
-
-        # # plot scale bar
-        # ax[1].plot([0.8-50/crop_sizeau/2, 0.8+50/crop_sizeau/2], 
-        #             [0.05, 0.05], transform=ax[1].transAxes,  # Scale bar in Axes coordinates
-        #             color=text_color, linewidth=4)
-        # ax[1].text(0.8, 0.13, '50AU', transform=ax[1].transAxes, fontweight='bold', fontsize=16, color=text_color, va='top', ha='left')
-
-        # ax[1].text(0.45, 0.95, 'Fiducial Model', fontweight='bold', transform=ax[1].transAxes, fontsize=16, color=text_color, va='top')
-        # ax[1].set_xticks([])
-        # ax[1].set_yticks([])
-
-    plt.savefig(f'{dir}{fname}.pdf', transparent=True)
-    plt.close()
+def b_T(wav, beam_info, data_jybeam): # Convert Jy/beam to brightness temperature
+    return 1.36*(wav*1e-4)**2*data_jybeam*1e3 / (beam_info[0] * beam_info[1])
 
 def save_image_to_fits(model_image, beam_info, coords, fname, stokes=['I', 'Q', 'U']):
-    cim = model_image.imConv(fwhm=[beam_info[0], beam_info[1]], pa=-(beam_info[2]+90), dpc=distance,)
+    cim = model_image.imConv(fwhm=[beam_info[0], beam_info[1]], pa=-(beam_info[2]), dpc=distance,)
     pix_x_au = cim.sizepix_x/au
     pix_y_au = cim.sizepix_y/au
     pix_x_arcsec = pix_x_au / distance
@@ -658,57 +381,155 @@ def save_image_to_fits(model_image, beam_info, coords, fname, stokes=['I', 'Q', 
         FITS_name = f'{fname}_conv_{stoke}.fits'
         os.system('rm -rf '+FITS_name)
         cim.writeFits(FITS_name, coord=coords, stokes=stoke,)
-"""
-Initialize observation (sed)
-"""
 
-freqs_HG19 = np.array([d["Freq"] for d in HG_19_data])
-S_B_HG19   = np.array([d["S_B"] for d in HG_19_data])
-sigma_HG19 = np.array([d["sigma"] for d in HG_19_data])
-freqs_this_work = np.array([d["Freq"] for d in this_work_data])
-S_B_this_work   = np.array([d["S_B"] for d in this_work_data])
-sigma_this_work = np.array([d["sigma"] for d in this_work_data])
+def plot_plr_diff_params(simulation, obs, dir, fname):
+    
+    obs_I, obs_PA, obs_Per = obs
+    model_img = simulation.conti
 
-def plot_sed_diff_params(simulation, dir, fname):
-    sed = simulation.spectrum
-    lam = sed[:, 0]
-    nu = (1e-2*cc)*1e-9/(1e-6*lam) # GHz
-    fnu = sed[:, 1]*1e26/(140**2) # mJy
+    fig, axes = plt.subplots(2, len(obs_wav), figsize=(4*len(obs_wav), 2*len(obs_wav)), constrained_layout=True)
 
-    fig, ax = plt.subplots(1, 2, figsize=(12, 10), sharey=True)
+    for i, lam in enumerate(obs_wav):
+        ax = axes[:, i]
+    
+        '''
+        Plot observed continuum and polarization data
+        '''
 
-    ax[0].scatter(freqs_HG19, S_B_HG19, marker='x', 
-                color='blue', s=30, label='Hernández-Gómez et al. 2019')
-    ax[0].scatter(freqs_this_work, S_B_this_work, marker='o', 
-                color='olive', s=100, label='This Work')
-    ax[0].plot(nu, fnu, 'o-r', label=f'model', 
-                    markersize=8)
-    ax[0].set_xscale('log'); ax[0].set_xlim((5e-1, 1e3))
-    ax[0].set_yscale('log'); ax[0].set_ylim((1e-2, 2e5))
-    ax[0].set_xlabel('Frequency (GHz)', fontsize=14)
-    ax[0].set_ylabel('Flux Density (mJy)', fontsize=14)
-    ax[0].set_title('SED', fontsize=16)
-    ax[0].grid(True, which='major', linestyle='--', linewidth=0.5)
-    ax[0].legend()
+        if i != 1:
+            interp_obs_I = ndimage.zoom(obs_I[i], zoom=obs_PA[i].shape[0] / obs_I[i].shape[0])
+            mask_obs = interp_obs_I > [25, None, 25, 5][i] * obs_rms[i]
+            obs_PA[i][~mask_obs] = np.nan
+            obs_Per[i][~mask_obs] = np.nan
+            x_sampled_obs, y_sampled_obs, u_segment_obs, v_segment_obs = b_segment(obs_PA[i], obs_Per[i], step=[10, None, 12, 4][i])
 
-    ax[1].scatter(freqs_HG19, S_B_HG19, marker='x', 
-                color='blue', s=30, label='Hernández-Gómez et al. 2019')
-    ax[1].scatter(freqs_this_work, S_B_this_work, marker='o', 
-                color='olive', s=100, label='This Work')
-    ax[1].plot(nu, fnu, 'o-r', label=f'model', 
-                    markersize=8)
-    ax[1].set_xscale('log'); ax[1].set_xlim((1e+1, 5e2))
-    ax[1].set_yscale('log'); ax[1].set_ylim((1e-2, 2e5))
-    ax[1].set_xlabel('Frequency (GHz)', fontsize=14)
-    ax[1].set_ylabel('Flux Density (mJy)', fontsize=14)
-    ax[1].set_title('SED (Zoomed)', fontsize=16)
-    ax[1].grid(True, which='major', linestyle='--', linewidth=0.5)
-    ax[1].legend()
+            ax[0].quiver(x_sampled_obs, y_sampled_obs, u_segment_obs, v_segment_obs, color=polar_color, 
+                        scale=30, headlength=0, headaxislength=0, headwidth=0, pivot='middle', width=0.01)
+            
+            # plot quiver key
+            ax[0].quiver(0.97, 0.18, 2.5, 0, color=polar_color, pivot='tip', transform=ax[0].transAxes,
+                        scale=30, headlength=0, headaxislength=0, headwidth=0, width=0.01)
+            ax[0].text(0.97, 0.26, r'5$\%$', transform=ax[0].transAxes, fontweight='bold', fontsize=16, color=polar_color, va='top', ha='right')
 
-    plt.tight_layout()
+            # plot beam ellipse for polarization
+            beam_major_arcsec, beam_minor_arcsec, beam_pa = beam_plr_info[i, :]
+            if i == 0:
+                beam = Ellipse((0.15, 0.18), transform=ax[0].transAxes,
+                                width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
+                                angle=beam_pa, edgecolor=polar_color, facecolor='None', lw=5)
+                ax[0].add_patch(beam)
+        
+        obs_I_bT = b_T(obs_wav[i], beam_info[i, :], obs_I[i])
+        # plot observed continuum image
+        if i == 0:
+            ax[0].imshow(obs_I_bT, origin='lower', cmap=conti_cmap, vmin=0, vmax=Tb_max[i], 
+                    extent=[0, obs_PA[i].shape[1], 0, obs_PA[i].shape[0]])
+        else:
+            ax[0].imshow(obs_I_bT, origin='lower', cmap=conti_cmap, vmin=0, vmax=Tb_max[i])
+        # plot colorbar
+        cbar = fig.colorbar(ax[0].images[0], ax=ax[0], orientation='horizontal', location='top',
+                        pad=0.00, shrink=0.95)
+        cbar.set_label(r'$T_b$ (K)', fontsize=16)
+        cbar.ax.tick_params(labelsize=14)
+
+        # plot scale bar
+        ax[0].plot([0.8-50/crop_sizeau/2, 0.8+50/crop_sizeau/2], [0.05, 0.05], transform=ax[0].transAxes,  # Scale bar in Axes coordinates
+                    color=text_color, linewidth=4)
+        ax[0].text(0.8, 0.13, '50AU', transform=ax[0].transAxes, fontweight='bold', fontsize=16, color=text_color, va='top', ha='left')
+
+        # plot beam ellipse for stokes I
+        beam_major_arcsec, beam_minor_arcsec, beam_pa = beam_info[i, :]
+
+        if i == 2:
+            beam = Ellipse((0.20, 0.18), transform=ax[0].transAxes,
+                            width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
+                            angle=beam_pa, edgecolor=polar_color, facecolor=text_color, lw=5)
+        elif i == 3:
+            beam = Ellipse((0.15, 0.18), transform=ax[0].transAxes,
+                            width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
+                            angle=beam_pa, edgecolor=polar_color, facecolor=text_color, lw=5)
+        else:
+            beam = Ellipse((0.15, 0.18), transform=ax[0].transAxes,
+                            width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
+                            angle=beam_pa, edgecolor=text_color, facecolor=text_color, lw=5)
+        ax[0].add_patch(beam)
+
+        ax[0].text(0.05, 0.95, obs_title[i], fontweight='bold', transform=ax[0].transAxes, fontsize=16, color=text_color, va='top')
+        ax[0].set_xticks([])
+        ax[0].set_yticks([])
+            
+        '''
+        Plot synthetic continuum and polarization
+        '''
+        save_image_to_fits(model_img, beam_info[i, :], obs_data_I_coords[i], f'{dir}model_{lam}um', stokes=['I'])
+        model_I, header_I, wcs_I = get_info(f'{dir}model_{lam}um_conv_I.fits')
+        model_I = model_I[i, :, :]
+        model_I_bT = b_T(obs_wav[i], beam_info[i, :], model_I)
+
+        if i != 1:
+            save_image_to_fits(model_img, beam_plr_info[i, :], obs_data_plr_coords[i], f'{dir}model_{lam}um', stokes=['Q', 'U'])
+            model_Q, header_Q, wcs_Q = get_info(f'{dir}model_{lam}um_conv_Q.fits')
+            model_U, header_U, wcs_U = get_info(f'{dir}model_{lam}um_conv_U.fits')
+            model_Q = model_Q[i, :, :]
+            model_U = model_U[i, :, :]
+            model_PA = 0.5 * np.arctan2(-model_U, -model_Q)
+            model_Per = np.sqrt(model_Q**2 + model_U**2) / model_I
+            mask_model = model_I > [25, None, 25, 5][i] * obs_rms[i]
+            model_PA[~mask_model] = np.nan
+            model_Per[~mask_model] = np.nan
+            x_sampled_model, y_sampled_model, u_segment_model, v_segment_model = b_segment(model_PA, model_Per, step=30)
+
+            
+            # plot model polarization segments
+            ax[1].quiver(x_sampled_model, y_sampled_model, u_segment_model, v_segment_model, color=polar_color, pivot='middle',
+                            scale=30, headlength=0, headaxislength=0, headwidth=0, width=0.01)
+
+            # plot quiver key
+            ax[1].quiver(0.97, 0.18, 2.5, 0, color=polar_color, pivot='tip', transform=ax[1].transAxes,
+                        scale=30, headlength=0, headaxislength=0, headwidth=0, width=0.01)
+            ax[1].text(0.97, 0.26, r'5$\%$', transform=ax[1].transAxes, fontweight='bold', fontsize=16, color=polar_color, va='top', ha='right')
+
+            beam_major_arcsec, beam_minor_arcsec, beam_pa = beam_plr_info[i, :]
+            if i == 2:
+                beam = Ellipse((0.20, 0.18), transform=ax[1].transAxes,
+                                width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
+                                angle=beam_pa, edgecolor=polar_color, facecolor=text_color, lw=5)
+            elif i == 3:
+                beam = Ellipse((0.15, 0.18), transform=ax[1].transAxes,
+                                width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
+                                angle=beam_pa, edgecolor=polar_color, facecolor=text_color, lw=5)
+            else:
+                beam = Ellipse((0.15, 0.18), transform=ax[1].transAxes,
+                                width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
+                                angle=beam_pa, edgecolor=polar_color, facecolor='None', lw=5)
+            ax[1].add_patch(beam)
+
+        ax[1].imshow(model_I_bT, origin='lower', cmap=conti_cmap, vmin=0, vmax=Tb_max[i])
+
+        if i == 0 or i == 1:
+            # plot beam ellipse
+            beam_major_arcsec, beam_minor_arcsec, beam_pa = beam_info[i, :]
+            beam = Ellipse((0.15, 0.18), transform=ax[1].transAxes,
+                            width=beam_minor_arcsec*distance/crop_sizeau, height=beam_major_arcsec*distance/crop_sizeau,
+                            angle=beam_pa, edgecolor=text_color, facecolor=text_color, lw=5)
+            ax[1].add_patch(beam)
+
+
+        # plot scale bar
+        ax[1].plot([0.8-50/crop_sizeau/2, 0.8+50/crop_sizeau/2], 
+                    [0.05, 0.05], transform=ax[1].transAxes,  # Scale bar in Axes coordinates
+                    color=text_color, linewidth=4)
+        ax[1].text(0.8, 0.13, '50AU', transform=ax[1].transAxes, fontweight='bold', fontsize=16, color=text_color, va='top', ha='left')
+
+        ax[1].text(0.45, 0.95, 'Fiducial Model', fontweight='bold', transform=ax[1].transAxes, fontsize=16, color=text_color, va='top')
+        ax[1].set_xticks([])
+        ax[1].set_yticks([])
+
     plt.savefig(f'{dir}{fname}.pdf', transparent=True)
     plt.close()
-    
+
+
+
 """
 Generate synthetic models and plot them
 """
@@ -727,9 +548,9 @@ simulate_mutual_parms = {
     "incl"      : incl,
     "npix"      : 500,
     "sizeau"    : crop_sizeau,
-    "posang"    : 0,
+    "posang"    : 90,
     "phi"       : 0,
-    "dir"       : f'/run/media/hyp0515/storage/layered_disk/ain_{ain}_amid_{amid}_aout_{aout}_Mdot_{mdot}_Q_{Q}_incl_{incl}_rd_{rd}_threelayer/',
+    "dir"       : f'/home/hyp0515/simulation/fiducial_model/',
 }
 simulation.generate_continuum(
     scat=True,
@@ -739,6 +560,7 @@ simulation.generate_continuum(
     fname=f'conti',
     **simulate_mutual_parms
 )
+
 simulation.generate_sed(
     scat=True,
     read_lambda=obs_wav*1e-3,
@@ -746,9 +568,6 @@ simulation.generate_sed(
     fname='sed',
     **simulate_mutual_parms
 )
-plot_sed_diff_params(simulation, dir=simulate_mutual_parms["dir"], fname='sed') 
-plot_conti_diff_params(simulation, obs_data_I, dir=simulate_mutual_parms["dir"], fname='conti')
-
 
 conti_cmap = 'Oranges'
 polar_color = 'dodgerblue'
@@ -756,4 +575,4 @@ text_color = 'k'
 obs_title = ['ALMA Band 6 (1.3mm)', 'ALMA Band 3 (3mm)', 'JVLA Q Band (7mm)', 'JVLA Ku Band (18mm)']
 Tb_max = [300, 450, 150, 300]
 plot_plr_diff_params(simulation, obs=(obs_data_I, obs_data_PA, obs_data_Per),
-                    dir=simulate_mutual_parms["dir"], fname='plr')
+                    dir='./', fname='fig_4')

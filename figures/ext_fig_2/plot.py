@@ -729,24 +729,16 @@ simulate_mutual_parms = {
     "sizeau"    : crop_sizeau,
     "posang"    : 0,
     "phi"       : 0,
-    "dir"       : f'/run/media/hyp0515/storage/layered_disk/ain_{ain}_amid_{amid}_aout_{aout}_Mdot_{mdot}_Q_{Q}_incl_{incl}_rd_{rd}_threelayer/',
+    "dir"       : f'/home/hyp0515/simulation/fiducial_model/',
 }
 simulation.generate_continuum(
     scat=True,
     stokes=True,
     read_lambda=obs_wav*1e-3,
-    load_simulation=False,
+    load_simulation=True,
     fname=f'conti',
     **simulate_mutual_parms
 )
-simulation.generate_sed(
-    scat=True,
-    read_lambda=obs_wav*1e-3,
-    load_simulation=False,
-    fname='sed',
-    **simulate_mutual_parms
-)
-plot_sed_diff_params(simulation, dir=simulate_mutual_parms["dir"], fname='sed') 
 plot_conti_diff_params(simulation, obs_data_I, dir=simulate_mutual_parms["dir"], fname='conti')
 
 
