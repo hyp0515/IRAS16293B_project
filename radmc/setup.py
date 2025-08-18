@@ -1580,8 +1580,8 @@ class Setup:
                 print( 'get_continuumlambda: Re-creating {} using default wavelengths.'.format(default_filename))
             else:
                 pass
-            lam1,lam2,lam3,lam4 = 0.5e0, 5.0e2, 5.0e3, 5.0e4
-            n12, n23, n34       = 100, 100, 50
+            lam1,lam2,lam3,lam4 = 1e-1, 5.0e2, 5.0e3, 1.0e6
+            n12, n23, n34       = 100, 100, 100
             lam12    = np.logspace(np.log10(lam1),np.log10(lam2),n12,endpoint=False)
             lam23    = np.logspace(np.log10(lam2),np.log10(lam3),n23,endpoint=False)
             lam34    = np.logspace(np.log10(lam3),np.log10(lam4),n34,endpoint=True)
