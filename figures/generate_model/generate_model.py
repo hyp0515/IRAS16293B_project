@@ -224,6 +224,7 @@ amid = 0.8
 aout = 0.08
 mdot= 4.5e-5
 rd = 35
+lambda_to_simulate = np.array([8.7e2, 1.3e3, 2e3, 3e3, 6.8e3, 9e3, 1.3e4, 2e4, 3e4, 3.75e4, 5e4, 7.5e4])*1e-3
 for Q in [0.3, 0.5, 0.8, 1.0, 1.5]:
     setup_model(ain, amid, aout, mdot, rd, Q, align=True)
     simulation = Simulation(save_out=True, save_npz=False)
@@ -237,7 +238,7 @@ for Q in [0.3, 0.5, 0.8, 1.0, 1.5]:
     }
     simulation.generate_sed(
         scat=True,
-        read_lambda=[8.7e2, 1.3e3, 2e3, 3e3, 6.8e3, 9e3, 1.3e4, 2e4, 3e4, 3.75e4, 5e4, 7.5e4]*1e-3,
+        read_lambda=lambda_to_simulate,
         load_simulation=False,
         fname='sed',
         **simulate_mutual_parms
@@ -264,7 +265,7 @@ for mdot in [5e-4, 1e-4, 5e-5, 1e-5, 5e-6, 1e-6]:
     }
     simulation.generate_sed(
         scat=True,
-        read_lambda=[8.7e2, 1.3e3, 2e3, 3e3, 6.8e3, 9e3, 1.3e4, 2e4, 3e4, 3.75e4, 5e4, 7.5e4]*1e-3,
+        read_lambda=lambda_to_simulate,
         load_simulation=False,
         fname='sed',
         **simulate_mutual_parms
@@ -291,7 +292,7 @@ for a in [10, 1, 0.7, 0.5, 0.3, 0.1, 0.01]:
     }
     simulation.generate_sed(
         scat=True,
-        read_lambda=[8.7e2, 1.3e3, 2e3, 3e3, 6.8e3, 9e3, 1.3e4, 2e4, 3e4, 3.75e4, 5e4, 7.5e4]*1e-3,
+        read_lambda=lambda_to_simulate,
         load_simulation=False,
         fname='sed',
         **simulate_mutual_parms
