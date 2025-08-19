@@ -147,70 +147,70 @@ obs_wav = np.array([
 """
 Fig. 4
 """
-incl = 45
-ain = 1.2
-amid = 0.8
-aout = 0.08
-mdot= 4.5e-5
-rd = 35
-Q = 0.4
+# incl = 45
+# ain = 1.2
+# amid = 0.8
+# aout = 0.08
+# mdot= 4.5e-5
+# rd = 35
+# Q = 0.4
 
-setup_model(ain, amid, aout, mdot, rd, Q, align=True)
-simulation = Simulation(save_out=True, save_npz=False)
-simulate_mutual_parms = {
-    "incl"      : incl,
-    "npix"      : 500,
-    "sizeau"    : crop_sizeau,
-    "posang"    : 90,
-    "phi"       : 0,
-    "dir"       : f'/home/hyp0515/simulation/fig_4/ain_{ain}_amid_{amid}_aout_{aout}_Mdot_{mdot}_Q_{Q}_incl_{incl}_rd_{rd}/',
-}
-simulation.generate_continuum(
-    scat=True,
-    stokes=True,
-    read_lambda=obs_wav*1e-3,
-    load_simulation=False,
-    fname=f'conti',
-    **simulate_mutual_parms
-)
+# setup_model(ain, amid, aout, mdot, rd, Q, align=True)
+# simulation = Simulation(save_out=True, save_npz=False)
+# simulate_mutual_parms = {
+#     "incl"      : incl,
+#     "npix"      : 500,
+#     "sizeau"    : crop_sizeau,
+#     "posang"    : 90,
+#     "phi"       : 0,
+#     "dir"       : f'/home/hyp0515/simulation/fig_4/ain_{ain}_amid_{amid}_aout_{aout}_Mdot_{mdot}_Q_{Q}_incl_{incl}_rd_{rd}/',
+# }
+# simulation.generate_continuum(
+#     scat=True,
+#     stokes=True,
+#     read_lambda=obs_wav*1e-3,
+#     load_simulation=False,
+#     fname=f'conti',
+#     **simulate_mutual_parms
+# )
 
 
 """
 Ext. Fig. 1
 """
-incl = 45
-ain = 1.2
-amid = 0.8
-aout = 0.08
-mdot= 4.5e-5
-rd = 35
+# incl = 45
+# ain = 1.2
+# amid = 0.8
+# aout = 0.08
+# mdot= 4.5e-5
+# rd = 35
 
-for Q in [0.3, 0.5, 0.8]:
-    setup_model(ain, amid, aout, mdot, rd, Q, align=True)
-    simulation = Simulation(save_out=True, save_npz=False)
-    simulate_mutual_parms = {
-        "incl"      : incl,
-        "npix"      : 500,
-        "sizeau"    : crop_sizeau,
-        "posang"    : 0,
-        "phi"       : 0,
-        "dir"       : f'/home/hyp0515/simulation/ext_fig_1/ain_{ain}_amid_{amid}_aout_{aout}_Mdot_{mdot}_Q_{Q}_incl_{incl}_rd_{rd}/',
-    }
-    simulation.generate_continuum(
-        scat=True,
-        stokes=True,
-        read_lambda=obs_wav*1e-3,
-        load_simulation=False,
-        fname=f'conti',
-        **simulate_mutual_parms
-    )
-    simulation.generate_sed(
-        scat=True,
-        read_lambda=obs_wav*1e-3,
-        load_simulation=False,
-        fname='sed',
-        **simulate_mutual_parms
-    )
+# for Q in [0.3, 0.5, 0.8]:
+#     setup_model(ain, amid, aout, mdot, rd, Q, align=True)
+#     simulation = Simulation(save_out=True, save_npz=False)
+#     simulate_mutual_parms = {
+#         "incl"      : incl,
+#         "npix"      : 500,
+#         "sizeau"    : crop_sizeau,
+#         "posang"    : 0,
+#         "phi"       : 0,
+#         "dir"       : f'/home/hyp0515/simulation/ext_fig_1/ain_{ain}_amid_{amid}_aout_{aout}_Mdot_{mdot}_Q_{Q}_incl_{incl}_rd_{rd}/',
+#     }
+#     simulation.generate_continuum(
+#         scat=True,
+#         stokes=True,
+#         read_lambda=obs_wav*1e-3,
+#         load_simulation=False,
+#         fname=f'conti',
+#         **simulate_mutual_parms
+#     )
+#     simulation.generate_sed(
+#         scat=True,
+#         read_lambda=obs_wav*1e-3,
+#         load_simulation=False,
+#         fname='sed',
+#         **simulate_mutual_parms
+#     )
 
 
 """
@@ -218,119 +218,137 @@ Ext. Fig. 2
 """
 
 # Left panel
-incl = 45
-ain = 1.2
-amid = 0.8
-aout = 0.08
-mdot= 4.5e-5
-rd = 35
+# incl = 45
+# ain = 1.2
+# amid = 0.8
+# aout = 0.08
+# mdot= 4.5e-5
+# rd = 35
 lambda_to_simulate = np.array([8.7e2, 1.3e3, 2e3, 3e3, 6.8e3, 9e3, 1.3e4, 2e4, 3e4, 3.75e4, 5e4, 7.5e4])*1e-3
-for Q in [0.3, 0.5, 0.8, 1.0, 1.5]:
-    setup_model(ain, amid, aout, mdot, rd, Q, align=True)
-    simulation = Simulation(save_out=True, save_npz=False)
-    simulate_mutual_parms = {
-        "incl"      : incl,
-        "npix"      : 500,
-        "sizeau"    : crop_sizeau,
-        "posang"    : 0,
-        "phi"       : 0,
-        "dir"       : f'/home/hyp0515/simulation/ext_fig_2/ain_{ain}_amid_{amid}_aout_{aout}_Mdot_{mdot}_Q_{Q}_incl_{incl}_rd_{rd}/',
-    }
-    simulation.generate_sed(
-        scat=True,
-        read_lambda=lambda_to_simulate,
-        load_simulation=False,
-        fname='sed',
-        **simulate_mutual_parms
-    )
+# for Q in [0.3, 0.5, 0.8, 1.0, 1.5]:
+#     setup_model(ain, amid, aout, mdot, rd, Q, align=True)
+#     simulation = Simulation(save_out=True, save_npz=False)
+#     simulate_mutual_parms = {
+#         "incl"      : incl,
+#         "npix"      : 500,
+#         "sizeau"    : crop_sizeau,
+#         "posang"    : 0,
+#         "phi"       : 0,
+#         "dir"       : f'/home/hyp0515/simulation/ext_fig_2/ain_{ain}_amid_{amid}_aout_{aout}_Mdot_{mdot}_Q_{Q}_incl_{incl}_rd_{rd}/',
+#     }
+#     simulation.generate_sed(
+#         scat=True,
+#         read_lambda=lambda_to_simulate,
+#         load_simulation=False,
+#         fname='sed',
+#         **simulate_mutual_parms
+#     )
 
 
 # Middle panel
+# incl = 45
+# ain = 1.2
+# amid = 0.8
+# aout = 0.08
+# Q = 0.4
+# rd = 35
+# for mdot in [5e-4, 1e-4, 5e-5, 1e-5, 5e-6, 1e-6]:
+#     setup_model(ain, amid, aout, mdot, rd, Q, align=True)
+#     simulation = Simulation(save_out=True, save_npz=False)
+#     simulate_mutual_parms = {
+#         "incl"      : incl,
+#         "npix"      : 500,
+#         "sizeau"    : crop_sizeau,
+#         "posang"    : 0,
+#         "phi"       : 0,
+#         "dir"       : f'/home/hyp0515/simulation/ext_fig_2/ain_{ain}_amid_{amid}_aout_{aout}_Mdot_{mdot}_Q_{Q}_incl_{incl}_rd_{rd}/',
+#     }
+#     simulation.generate_sed(
+#         scat=True,
+#         read_lambda=lambda_to_simulate,
+#         load_simulation=False,
+#         fname='sed',
+#         **simulate_mutual_parms
+#     )
+
+# Right panel
+# incl = 45
+# mdot= 4.5e-5
+# Q = 0.4
+# rd = 35
+# for a in [10, 1, 0.7, 0.5, 0.3, 0.1, 0.01]:
+#     ain = a
+#     amid = a
+#     aout = a
+#     setup_model(ain, amid, aout, mdot, rd, Q, align=True)
+#     simulation = Simulation(save_out=True, save_npz=False)
+#     simulate_mutual_parms = {
+#         "incl"      : incl,
+#         "npix"      : 500,
+#         "sizeau"    : crop_sizeau,
+#         "posang"    : 0,
+#         "phi"       : 0,
+#         "dir"       : f'/home/hyp0515/simulation/ext_fig_2/ain_{ain}_amid_{amid}_aout_{aout}_Mdot_{mdot}_Q_{Q}_incl_{incl}_rd_{rd}/',
+#     }
+#     simulation.generate_sed(
+#         scat=True,
+#         read_lambda=lambda_to_simulate,
+#         load_simulation=False,
+#         fname='sed',
+#         **simulate_mutual_parms
+#     )
+
+# Fiducial Model
 incl = 45
 ain = 1.2
 amid = 0.8
 aout = 0.08
-Q = 0.4
-rd = 35
-for mdot in [5e-4, 1e-4, 5e-5, 1e-5, 5e-6, 1e-6]:
-    setup_model(ain, amid, aout, mdot, rd, Q, align=True)
-    simulation = Simulation(save_out=True, save_npz=False)
-    simulate_mutual_parms = {
-        "incl"      : incl,
-        "npix"      : 500,
-        "sizeau"    : crop_sizeau,
-        "posang"    : 0,
-        "phi"       : 0,
-        "dir"       : f'/home/hyp0515/simulation/ext_fig_2/ain_{ain}_amid_{amid}_aout_{aout}_Mdot_{mdot}_Q_{Q}_incl_{incl}_rd_{rd}/',
-    }
-    simulation.generate_sed(
-        scat=True,
-        read_lambda=lambda_to_simulate,
-        load_simulation=False,
-        fname='sed',
-        **simulate_mutual_parms
-    )
-
-# Right panel
-incl = 45
 mdot= 4.5e-5
-Q = 0.4
 rd = 35
-for a in [10, 1, 0.7, 0.5, 0.3, 0.1, 0.01]:
-    ain = a
-    amid = a
-    aout = a
-    setup_model(ain, amid, aout, mdot, rd, Q, align=True)
-    simulation = Simulation(save_out=True, save_npz=False)
-    simulate_mutual_parms = {
-        "incl"      : incl,
-        "npix"      : 500,
-        "sizeau"    : crop_sizeau,
-        "posang"    : 0,
-        "phi"       : 0,
-        "dir"       : f'/home/hyp0515/simulation/ext_fig_2/ain_{ain}_amid_{amid}_aout_{aout}_Mdot_{mdot}_Q_{Q}_incl_{incl}_rd_{rd}/',
-    }
-    simulation.generate_sed(
-        scat=True,
-        read_lambda=lambda_to_simulate,
-        load_simulation=False,
-        fname='sed',
-        **simulate_mutual_parms
-    )
+Q = 0.4
+setup_model(ain, amid, aout, mdot, rd, Q, align=True)
+simulation = Simulation(save_out=True, save_npz=False)
+simulation.generate_sed(
+    scat=True,
+    read_lambda=lambda_to_simulate,
+    load_simulation=False,
+    fname='sed',
+    dir=f'/home/hyp0515/simulation/ext_fig_2/fiducial/'
+)
 
 """
 Ext. Fig. 3
 """
-incl = 45
-mdot= 4.5e-5
-rd = 35
-Q = 0.4
-for a in [10, 50, 100, 200, 400, 800, 1600, 3200, 6400]:
-    ain = a * 1e-3
-    amid = ain
-    aout = ain
-    setup_model(ain, amid, aout, mdot, rd, Q, align=True)
-    simulation = Simulation(save_out=True, save_npz=False)
-    simulate_mutual_parms = {
-        "incl"      : incl,
-        "npix"      : 500,
-        "sizeau"    : crop_sizeau,
-        "posang"    : 0,
-        "phi"       : 0,
-        "dir"       : f'/home/hyp0515/simulation/ext_fig_3/ain_{ain}_amid_{amid}_aout_{aout}_Mdot_{mdot}_Q_{Q}_incl_{incl}_rd_{rd}/',
-    }
-    simulation.generate_continuum(
-        scat=True,
-        stokes=True,
-        read_lambda=obs_wav*1e-3,
-        load_simulation=False,
-        fname=f'conti',
-        **simulate_mutual_parms
-    )
-    simulation.generate_sed(
-        scat=True,
-        read_lambda=obs_wav*1e-3,
-        load_simulation=False,
-        fname='sed',
-        **simulate_mutual_parms
-    )
+# incl = 45
+# mdot= 4.5e-5
+# rd = 35
+# Q = 0.4
+# for a in [10, 50, 100, 200, 400, 800, 1600, 3200, 6400]:
+#     ain = a * 1e-3
+#     amid = ain
+#     aout = ain
+#     setup_model(ain, amid, aout, mdot, rd, Q, align=True)
+#     simulation = Simulation(save_out=True, save_npz=False)
+#     simulate_mutual_parms = {
+#         "incl"      : incl,
+#         "npix"      : 500,
+#         "sizeau"    : crop_sizeau,
+#         "posang"    : 0,
+#         "phi"       : 0,
+#         "dir"       : f'/home/hyp0515/simulation/ext_fig_3/ain_{ain}_amid_{amid}_aout_{aout}_Mdot_{mdot}_Q_{Q}_incl_{incl}_rd_{rd}/',
+#     }
+#     simulation.generate_continuum(
+#         scat=True,
+#         stokes=True,
+#         read_lambda=obs_wav*1e-3,
+#         load_simulation=False,
+#         fname=f'conti',
+#         **simulate_mutual_parms
+#     )
+#     simulation.generate_sed(
+#         scat=True,
+#         read_lambda=obs_wav*1e-3,
+#         load_simulation=False,
+#         fname='sed',
+#         **simulate_mutual_parms
+#     )
